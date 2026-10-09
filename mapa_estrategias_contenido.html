@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mapa de estrategias · Tipo de contenido → Enfoque → Hook</title>
+
+<!-- Librería de renderizado: Vis.js Network (necesita internet para cargarse) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.9/standalone/umd/vis-network.min.js"></script>
+
+<style>
+  /* ============ Estilo general (tema oscuro moderno) ============ */
+  :root{
+    --bg:#0f1419; --panel:#161c24; --panel-2:#1d2530; --line:#2a3441;
+    --text:#e6edf3; --muted:#8b98a8; --accent:#4cc9f0;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; }
+  body{
+    background:var(--bg); color:var(--text);
+    font-family: Inter, "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+    display:flex; flex-direction:column;
+  }
+
+  /* Barra superior con controles */
+  header{
+    display:flex; flex-wrap:wrap; align-items:center; gap:10px;
+    padding:12px 16px; background:var(--panel); border-bottom:1px solid var(--line);
+  }
+  header h1{ font-size:16px; margin:0 12px 0 0; font-weight:650; letter-spacing:.2px; }
+  header h1 span{ color:var(--muted); font-weight:400; }
+  button, input{
+    font:inherit; font-size:13px; color:var(--text);
+    background:var(--panel-2); border:1px solid var(--line); border-radius:8px;
+    padding:7px 12px; outline:none;
+  }
+  button{ cursor:pointer; transition:background .15s, border-color .15s; }
+  button:hover{ background:#26303d; border-color:#3a4757; }
+  button.on{ border-color:var(--accent); color:var(--accent); }
+  input{ min-width:220px; }
+  input:focus{ border-color:var(--accent); }
+  .spacer{ flex:1; }
+  #count{ color:var(--muted); font-size:12px; }
+
+  /* Zona principal: lienzo + panel lateral */
+  main{ flex:1; display:flex; min-height:0; }
+  #network{ flex:1; min-width:0; }
+  aside{
+    width:340px; max-width:42vw; background:var(--panel);
+    border-left:1px solid var(--line); padding:18px; overflow:auto;
+  }
+  aside h2{ font-size:11px; letter-spacing:1.2px; text-transform:uppercase; color:var(--muted); margin:0 0 10px; }
+  .crumb{ font-size:12px; color:var(--muted); margin-bottom:8px; }
+  .title{ font-size:17px; font-weight:650; margin:0 0 12px; line-height:1.3; }
+  .block{ background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:10px; }
+  .block .k{ font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin-bottom:5px; }
+  .block .v{ font-size:14px; line-height:1.55; }
+  .chip{ display:inline-block; font-size:12px; padding:3px 9px; border-radius:99px; margin:0 6px 6px 0; background:#26303d; cursor:pointer; }
+  .chip:hover{ background:#304052; }
+  .hint{ color:var(--muted); font-size:13px; line-height:1.55; }
+
+  /* Leyenda */
+  .legend{ display:flex; gap:14px; align-items:center; font-size:12px; color:var(--muted); }
+  .legend i{ display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
+
+  @media (max-width:820px){
+    main{ flex-direction:column; }
+    aside{ width:100%; max-width:none; height:36%; border-left:none; border-top:1px solid var(--line); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Mapa de estrategias <span>· Tipo de contenido → Enfoque → Hook / Cuerpo</span></h1>
+  <button id="btnExpand">Expandir todo</button>
+  <button id="btnHooks">Mostrar enfoques</button>
+  <button id="btnCollapse">Colapsar todo</button>
+  <button id="btnPhysics" class="on">Física: ON</button>
+  <button id="btnFit">Centrar</button>
+  <input id="search" type="search" placeholder="Buscar en los hooks…">
+  <span id="count"></span>
+  <span class="spacer"></span>
+  <div class="legend">
+    <span><i style="background:#4cc9f0"></i>Tipo de contenido</span>
+    <span><i style="background:#9b8cff"></i>Enfoque</span>
+    <span><i style="background:#2a3441;border:1px solid #8b98a8"></i>Hook</span>
+    <span><i style="background:#2a2418;border:1px dashed #f5c26b"></i>Cuerpo</span>
+  </div>
+</header>
+
+<main>
+  <div id="network"></div>
+  <aside id="panel">
+    <h2>Detalle</h2>
+    <p class="hint">Haz clic en un <b>tipo de contenido</b> o en un <b>enfoque</b> para expandirlo o colapsarlo.
+    Haz clic en un <b>hook</b> o en un <b>cuerpo</b> (borde discontinuo ámbar) para leer aquí el texto completo.<br><br>
+    Puedes arrastrar los nodos: los demás se repelen como una telaraña. Rueda del ratón = zoom.</p>
+  </aside>
+</main>
+
+<script>
+/* =====================================================================
+   1) DATOS  — EDITA SOLO ESTA SECCIÓN PARA CAMBIAR EL MAPA
+   Estructura: Tipo de contenido → Enfoque → Hook
+   (aquí el "tipo de contenido" es cada campaña de anuncios)
+   Cada hook: H(id, nombre corto, texto completo, variante, formato)
+   ===================================================================== */
+const H = (id, nombre, texto, variante, formato) => ({ id, nombre, texto, variante: variante || "", formato: formato || "" });
+
+const DATA = [
+  { tipo: "Summer Villas", color: "#4cc9f0", enfoques: [
+    { nombre: "Especialidad", hooks: [
+      H("H1","Se busca (cupos)","Se buscan 3 propietarios de villa en Tenerife que quieran más reservas directas y menos comisiones.","Si tu villa en Costa Adeje solo se llena por Airbnb, regalas comisión en cada reserva.","«Se busca» en imagen + texto plano en Canva"),
+      H("H3","Propietario ausente","Vives en Reino Unido, tu villa está en Tenerife y no sabes qué pasa ahí dentro.","¿Cuándo fue la última vez que tu gestor te enseñó números reales?","Voz en off sobre tomas de la villa + antes y después"),
+      H("H6","Saturado","Mensajes de huéspedes a las 3 de la mañana, en inglés y en alemán… y tú con tu trabajo.","","Checklist en libreta o UGC de propietario")
+    ]},
+    { nombre: "Storytelling", hooks: [
+      H("H2","Miedo a fiestas y daños","¿Dejarías tu villa a un desconocido sin saber si organiza una fiesta? Nosotros ponemos sensores de ruido.","Tu villa está sola esta noche… ¿quién te avisa si hay una fiesta?","Conversación de WhatsApp (alerta del sensor) o pantalla screen"),
+      H("H7","Overbooking","Airbnb dice que tu villa está libre. Booking también. Y tienes dos familias en la puerta.","Un overbooking no es un error de calendario: es una reseña de una estrella y un reembolso.","Pizarra en vivo")
+    ]},
+    { nombre: "Mito", hooks: [
+      H("H5","El 20% y el neto","“El 20% de comisión es caro.” Depende de a cuánto te salga el 80% restante.","Gestionar tu villa tú solo parece gratis… hasta que cuentas tus noches vacías.","Respondiendo a un comentario, o encuesta + texto plano")
+    ]},
+    { nombre: "Curiosidad", hooks: [
+      H("H9","Fianza y desaparecidos","Un huésped rompe algo y desaparece. ¿Quién paga? Pregúntale a tu gestor por la fianza.","¿Sabes cómo se verifica a los huéspedes que entran en tu villa?","Walk-and-talk en la villa"),
+      H("H11","Dependencia de una plataforma","Si Airbnb suspende tu anuncio mañana, ¿cuánto tardas en tener otra reserva?","Tu villa depende de un algoritmo que no controlas. Eso también es un riesgo.","Cronómetro o walk-and-talk")
+    ]},
+    { nombre: "Coste de inacción", hooks: [
+      H("H4","Licencia escasa","En Canarias ya no es fácil conseguir una licencia vacacional nueva. Si tienes una y tu villa pasa meses vacía, tienes un activo mal aprovechado.","","Formato noticia o bloc de notas (validar redacción con el cliente)"),
+      H("H8","Villa de dos meses","Si tu villa solo se llena en agosto y Navidad, no tienes una villa: tienes una villa de dos meses.","Mira tu calendario de febrero. Esas noches vacías ya no vuelven.","Pizarra o cronómetro"),
+      H("H10","Precio fijo","¿Cobras lo mismo en Semana Santa que un martes de noviembre? Tu villa no vale lo mismo todas las semanas.","Un precio fijo en una villa con piscina en Costa Adeje es una decisión cara.","Pizarra")
+    ]}
+  ]},
+
+  { tipo: "Catalunya Casas", color: "#ff9f6b", enfoques: [
+    { nombre: "Especialidad", hooks: [
+      H("H1","Se busca","Se buscan 5 propietarios en Cataluña que sienten que su gestor no les da lo que prometió.","","«Se busca» en imagen"),
+      H("H7","Un número más en la cartera","¿Cuántas casas lleva tu gestor? Si no lo sabes, la tuya probablemente sea una más de la lista.","Tu gestor te llama «propietario». ¿Sabe cómo se llama tu casa?","Walk-and-talk o cronómetro")
+    ]},
+    { nombre: "Storytelling", hooks: [
+      H("H2","Comunicación","Si tu gestor tarda días en contestarte, tu casa está en piloto automático… y no es el tuyo.","","Conversación de WhatsApp «versus»"),
+      H("H6","Limpieza y reseñas","Una limpieza mal hecha es una reseña de tres estrellas, y una reseña de tres estrellas son menos reservas el mes que viene.","","Reaccionando a una reseña mala, o formato noticia"),
+      H("H11","Mantenimiento por reseña","Se estropea el aire acondicionado y te enteras por una reseña.","Si lo primero que sabes de un problema en tu casa es lo que escribe un huésped, nadie la está vigilando.","Walk-and-talk en la propiedad")
+    ]},
+    { nombre: "Mito", hooks: [
+      H("H3","Miedo al cambio","Cambiar de gestor no significa perder reservas. Nosotros migramos tus anuncios y calendarios.","","Checklist en vídeo")
+    ]},
+    { nombre: "Curiosidad", hooks: [
+      H("H4","Tarifas poco claras","¿Sabes exactamente cuánto te cobra tu gestor y por qué?","Tarifas que no entiendes + informes que no llegan = señal de alerta.","Encuesta + texto plano, o pique"),
+      H("H9","La VUT es tuya","Tu número de VUT es tuyo, no de tu gestor. ¿Sabes quién lo tiene controlado?","Si tu ayuntamiento te pidiera la documentación de tu VUT mañana, ¿sabrías dónde está?","Cronómetro (validar redacción legal con el cliente)"),
+      H("H10","El contrato","¿Cuántos meses de preaviso tiene tu contrato con el gestor? Léelo antes de seguir pagando.","Si no sabes cómo salir de tu contrato, no es tu gestor quien trabaja para ti.","Pizarra")
+    ]},
+    { nombre: "Coste de inacción", hooks: [
+      H("H5","Lo que dejas de ganar","La pregunta no es si puedes cambiar de gestor. Es cuánto estás dejando de ganar por no hacerlo.","","Antes y después del calendario (datos reales) o experimento de precios"),
+      H("H8","Huecos en el calendario","Mira tu calendario de noviembre. Esos huecos de una o dos noches no son mala suerte: son una estancia mínima mal puesta.","Tu casa tiene huecos entre reservas que nadie está rellenando.","Pizarra")
+    ]}
+  ]},
+
+  { tipo: "Opal Properties", color: "#7ee081", enfoques: [
+    { nombre: "Especialidad", hooks: [
+      H("H1","Se busca","Se buscan 5 propietarios con piso turístico en España que pierden reservas en Airbnb y no saben por qué.","Si tu calendario de Airbnb tiene huecos en plena temporada, no es mala suerte.","«Se busca» en imagen + texto plano")
+    ]},
+    { nombre: "Mito", hooks: [
+      H("H4","Anuncio invisible","Estar en Airbnb no es lo mismo que aparecer. Tu anuncio puede estar en la página 8.","","Pizarra o experimento")
+    ]},
+    { nombre: "Curiosidad", hooks: [
+      H("H3","Destino top, calendario vacío","España es uno de los países más visitados del mundo y tu piso sigue con huecos. El problema no es la demanda.","Los turistas vienen. La pregunta es por qué no llegan a tu anuncio.","Pizarra o noticia")
+    ]},
+    { nombre: "Contraste", hooks: [
+      H("H6","El vecino que sí llena","Hay quien llena su piso todo el año con las mismas plataformas que tú. La diferencia no es la suerte.","","Pique o respondiendo a un comentario")
+    ]},
+    { nombre: "Coste de inacción", hooks: [
+      H("H2","Partes a mano","Reserva nueva, parte de viajeros a mano. Multiplica ese rato por todas tus reservas del año.","¿Cuántas horas al mes pierdes pasando partes uno a uno?","Pantalla screen o cronómetro"),
+      H("H5","Fecha perdida","Una noche que no se reserva hoy no se recupera mañana. Tu calendario de este mes ya tiene fechas perdidas.","Cada hueco en tu calendario es un ingreso que no vuelve.","Antes/después del calendario (solo datos reales)")
+    ]}
+  ]},
+
+  { tipo: "Studio Reina · Espalda y Pierna 50%", color: "#ff6b9d", enfoques: [
+    { nombre: "Especialidad", hooks: [
+      H("H1","Se busca","Se buscan 5 personas en Valencia que llevan años queriendo tatuarse la espalda o la pierna y siguen esperando.","","«Se busca» en imagen")
+    ]},
+    { nombre: "Mito", hooks: [
+      H("H3","Precio","Un tatuaje grande no sale caro por el tamaño. Sale caro cuando hay que corregirlo.","Lo barato en una pieza grande suele salir dos veces: la primera y la que la arregla.","Pique")
+    ]},
+    { nombre: "Curiosidad", hooks: [
+      H("H4","Boceto antes de tatuar","Antes de tatuarte una pieza grande tienes que ver el boceto colocado sobre tu piel. ¿Te lo han enseñado?","","Voz en off sobre el proceso o tras las cámaras"),
+      H("H5","Sesiones","¿Espalda o pierna? Te explicamos cuántas sesiones lleva y cómo se reparte, antes de pagar nada.","Una pieza grande no se hace de golpe: se planifica por sesiones.","Entrevista ping-pong o checklist")
+    ]},
+    { nombre: "Coste de inacción", hooks: [
+      H("H2","El 50% con fecha","Hasta el [fecha], 50% en tatuajes de espalda y pierna en Valencia. Después, precio normal.","Tu tatuaje grande, a mitad de precio. Hasta el [fecha].","Texto plano en Canva o pancarta"),
+      H("H6","Años de espera","Llevas años con ese tatuaje en la cabeza. La oferta dura hasta el [fecha]; tu excusa, no.","Cada año que esperas es un año sin el tatuaje que ya tienes pensado.","Confesión o libreta")
+    ]}
+  ]},
+
+  { tipo: "Studio Reina · Micro", color: "#f7d154", enfoques: [
+    { nombre: "Especialidad", hooks: [
+      H("H1","Se busca","Se busca persona en Valencia que lleva meses con un mini tatuaje guardado en el móvil y no se atreve.","","«Se busca» en imagen"),
+      H("H4","Precio y tiempo","Un mini tatuaje desde [34 €], en una cita de unos [30 minutos]. [Validar precio y duración].","","Pantalla screen o encuesta")
+    ]},
+    { nombre: "Storytelling", hooks: [
+      H("H6","La captura del móvil","Esa captura que llevas meses guardada: enséñanosla y te decimos cómo quedaría.","","UGC o conversación de WhatsApp")
+    ]},
+    { nombre: "Mito", hooks: [
+      H("H2","Primer tatuaje","Tu primer tatuaje no tiene que ser una decisión para toda la vida. Puede medir 4 cm.","Empieza por lo pequeño. Si te gusta, ya veremos.","Texto plano en Canva o libreta")
+    ]},
+    { nombre: "Curiosidad", hooks: [
+      H("H3","Línea fina que se difumina","¿Se difuminan los tatuajes de línea fina? Depende de quién los haga y de dónde te los hagas.","Dos minis iguales pueden verse muy distintos a los dos años. Esto es lo que marca la diferencia.","Pique o respondiendo a un hater"),
+      H("H5","Dolor sin adornos","El dolor de un mini tatuaje, sin adornos: lo que sientes, cuánto dura y qué zona duele menos.","","Entrevista ping-pong")
+    ]}
+  ]},
+
+  { tipo: "Habitando Madrid · Captación Las Rozas", color: "#c18bff", enfoques: [
+    { nombre: "Especialidad", hooks: [
+      H("H1","Se busca","Se buscan 3 propietarios de chalet en Las Rozas que quieran vender en exclusiva con un plan de venta a medida.","","«Se busca» en imagen o pancarta")
+    ]},
+    { nombre: "Mito", hooks: [
+      H("H2","Publicar y esperar","Subir tu casa a Idealista y esperar no es una estrategia de venta. Es una apuesta.","Tu casa lleva meses en el portal y nadie te ha enseñado un plan.","Walk-and-talk en una vivienda o voz en off"),
+      H("H5","Miedo a la exclusiva","Firmar una exclusiva da miedo cuando nadie te enseña qué van a hacer con ella.","¿Firmarías una exclusiva sin ver el plan de venta?","Confesión o entrevista ping-pong")
+    ]},
+    { nombre: "Curiosidad", hooks: [
+      H("H4","Visitas sin ofertas","Si tu casa en Las Rozas recibe visitas pero ninguna oferta, el problema no es la casa.","Muchas visitas y ninguna oferta: eso tiene explicación.","Noticia o respondiendo a un comentario"),
+      H("H6","Cuánto vale de verdad","¿Cuánto vale tu casa en Las Rozas? No te lo dice un portal: te lo dice el estudio de tu caso.","","Pantalla screen o encuesta")
+    ]},
+    { nombre: "Coste de inacción", hooks: [
+      H("H3","Bajadas de precio","Cada vez que bajas el precio de tu casa, el mercado entiende que estaba mal valorada desde el principio.","¿Cuántas veces has bajado ya el precio de tu casa?","Pizarra o pique")
+    ]}
+  ]}
+];
+
+/* Color fijo para el nivel «Enfoque» */
+const ENFOQUE_COLOR = "#9b8cff";
+
+/* =====================================================================
+   1b) CUERPOS (guiones) — tanda nueva
+   Un cuerpo es el texto que va después del hook y encaja con cualquier
+   hook de su campaña, por eso cuelga del enfoque pero no de un hook concreto.
+   C(id, nombre, [[etiqueta, texto], ...], nota)
+   ===================================================================== */
+const C = (id, nombre, partes, nota) => ({ id, nombre, partes, nota: nota || "" });
+
+/* Añade un enfoque nuevo (con sus cuerpos) a una campaña */
+function addEnfoque(tipo, nombre, cuerpos) {
+  DATA.find(t => t.tipo === tipo).enfoques.push({ nombre, hooks: [], cuerpos });
+}
+/* Cuelga cuerpos de un enfoque que ya existe */
+function addCuerpos(tipo, enfoque, cuerpos) {
+  DATA.find(t => t.tipo === tipo).enfoques.find(e => e.nombre === enfoque).cuerpos = cuerpos;
+}
+
+/* ---- Opal Properties ---- */
+addEnfoque("Opal Properties", "PAS", [
+  C("Cuerpo E", "Fórmula PAS (Problema, Agitación, Solución)", [
+    ["Problema", "Tienes huecos en tu calendario de Airbnb y sigues pasando los partes de viajeros a mano, uno a uno."],
+    ["Agitación", "Cada noche vacía es dinero que no vuelve, y cada reserva nueva te roba horas haciendo papeleo en lugar de dejarte disfrutar de los beneficios de tu inversión."],
+    ["Solución", "En Opal [servicio principal a confirmar] optimizamos tu anuncio para que ganes visibilidad y sistematicemos tus reservas. Recuperas tu tiempo y dejas de perder ingresos. [Garantía o condiciones a validar]."]
+  ])
+]);
+addCuerpos("Opal Properties", "Contraste", [
+  C("Cuerpo F", "Ángulo de Beneficio Directo / Contraste", [
+    ["Contraste", "Gestionar un piso turístico en España no debería sentirse como un segundo trabajo a tiempo completo."],
+    ["Desarrollo", "La demanda ya existe (somos uno de los países más visitados). Si no llenas, es porque tu anuncio no está posicionado o tu calendario no está optimizado."],
+    ["Promesa", "Nosotros nos encargamos de que tu anuncio destaque y de que los partes de viajeros se hagan solos desde el minuto uno."]
+  ])
+]);
+
+/* ---- Studio Reina · Espalda y Pierna 50% ---- */
+addEnfoque("Studio Reina · Espalda y Pierna 50%", "PAS", [
+  C("Cuerpo E", "Fórmula PAS (Problema, Agitación, Solución)", [
+    ["Problema", "Llevas años queriendo esa pieza grande en la espalda o la pierna, pero el precio y el miedo a que no quede como imaginas te frenan."],
+    ["Agitación", "Pasa el tiempo, sigues viendo diseños en internet y al final nunca das el paso porque temes pagar de golpe por algo de lo que podrías arrepentirte."],
+    ["Solución", "En Studio Reina te enseñamos el boceto colocado en tu piel antes de empezar, lo planificamos por sesiones y, hasta el [fecha], te lo llevas con un 50% de descuento. Si no te convence el diseño, no empezamos."]
+  ])
+]);
+addEnfoque("Studio Reina · Espalda y Pierna 50%", "Autoridad", [
+  C("Cuerpo F", "Ángulo de Autoridad / Proceso Transparente", [
+    ["Autoridad", "Lo más difícil de un tatuaje grande no es el tamaño, es clavar el diseño a la primera y que sepas qué va a pasar en cada momento."],
+    ["Desarrollo", "Por eso no improvisamos. Hablamos de tu idea, adaptamos el boceto y te explicamos exactamente cuántas sesiones llevará."],
+    ["Promesa", "Aprovecha el 50% en espalda y pierna hasta el [fecha] y llévate el tatuaje que llevas años imaginando, sin sorpresas en el precio ni en el resultado."]
+  ])
+]);
+
+/* ---- Studio Reina · Micro ---- */
+addEnfoque("Studio Reina · Micro", "PAS", [
+  C("Cuerpo E", "Fórmula PAS (Problema, Agitación, Solución)", [
+    ["Problema", "Llevas meses con la captura de ese diseño guardada en el móvil pero no terminas de decidirte."],
+    ["Agitación", "No te atreves porque temes que la línea no quede fina, que se vea borroso con los años o que sea una decisión demasiado grande."],
+    ["Solución", "Tu primer tatuaje puede medir solo 4 cm. Hacemos mini tatuajes con líneas precisas y te asesoramos para que quede perfecto, desde solo [34 €] y en una cita de unos [30 minutos]."]
+  ])
+]);
+addEnfoque("Studio Reina · Micro", "Empatía", [
+  C("Cuerpo F", "Ángulo de Empatía / Cero Presión", [
+    ["Empatía", "Hacerse un tatuaje pequeño no tiene que dar vértigo ni sentirse como una decisión de vida o muerte."],
+    ["Desarrollo", "En Studio Reina entendemos que buscas algo fino y discreto. Por eso elegimos contigo el tamaño y la zona, y ves el diseño sobre tu piel antes de tocar la aguja."],
+    ["Promesa", "Una cita corta, un resultado nítido y la tranquilidad de que si no lo ves claro en el momento, no te tatúas."]
+  ])
+]);
+
+/* ---- Habitando Madrid · Captación Las Rozas ---- */
+addEnfoque("Habitando Madrid · Captación Las Rozas", "PAS", [
+  C("Cuerpo E", "Fórmula PAS (Problema, Agitación, Solución)", [
+    ["Problema", "Tu chalet en Las Rozas lleva meses publicado y solo recibes visitas de curiosos que no hacen ninguna oferta real."],
+    ["Agitación", "Bajar el precio otra vez solo le dirá al mercado que la casa estaba mal valorada desde el principio, y firmar una exclusiva a ciegas te da miedo porque no sabes qué harán realmente con tu casa."],
+    ["Solución", "En Habitando Madrid no subimos un anuncio a Idealista para sentarnos a esperar. Creamos un plan de marketing a medida con pasos definidos y te lo enseñamos antes de que firmes nada."]
+  ])
+]);
+addEnfoque("Habitando Madrid · Captación Las Rozas", "Verdad incómoda", [
+  C("Cuerpo F", "Ángulo de la «Verdad Incómoda» (Hard Truth)", [
+    ["Verdad", "Si tu casa de más de 300.000 € en Las Rozas recibe visitas pero nadie la compra, el problema casi nunca es la casa."],
+    ["Desarrollo", "El problema es la estrategia. Vender en urbanizaciones como Monte Rozas o El Cantizal requiere más que unas fotos genéricas; requiere presentarla al comprador cualificado correcto y saber gestionar las visitas."],
+    ["Promesa", "Déjanos estudiar tu caso, valorarlo de verdad y mostrarte el plan de venta específico que necesita tu propiedad para dejar de perder el tiempo. [Condiciones de exclusiva a validar]."]
+  ])
+]);
+
+/* =====================================================================
+   2) CONSTRUCCIÓN DEL ÁRBOL INTERNO
+   meta[id] = { nivel, padre, hijos[], datos, color, tipoNombre, enfoqueNombre }
+   nivel 0 = Tipo de contenido · 1 = Enfoque · 2 = Hook
+   ===================================================================== */
+const meta = {};
+const topIds = [];
+
+DATA.forEach((t, i) => {
+  const tid = "t" + i;
+  topIds.push(tid);
+  meta[tid] = { nivel: 0, padre: null, hijos: [], datos: t, color: t.color, tipoNombre: t.tipo, expandido: false };
+
+  t.enfoques.forEach((e, j) => {
+    const eid = tid + "_e" + j;
+    meta[tid].hijos.push(eid);
+    meta[eid] = { nivel: 1, padre: tid, hijos: [], datos: e, color: t.color, tipoNombre: t.tipo, enfoqueNombre: e.nombre, expandido: false };
+
+    e.hooks.forEach((h, k) => {
+      const hid = eid + "_h" + k;
+      meta[eid].hijos.push(hid);
+      meta[hid] = { nivel: 2, clase: "hook", padre: eid, hijos: [], datos: h, color: t.color, tipoNombre: t.tipo, enfoqueNombre: e.nombre, expandido: false };
+    });
+
+    /* Cuerpos (guiones) que cuelgan del enfoque */
+    (e.cuerpos || []).forEach((c, k) => {
+      const cid = eid + "_c" + k;
+      meta[eid].hijos.push(cid);
+      meta[cid] = { nivel: 2, clase: "cuerpo", padre: eid, hijos: [], datos: c, color: t.color, tipoNombre: t.tipo, enfoqueNombre: e.nombre, expandido: false };
+    });
+  });
+});
+
+/* Cuenta total de hooks descendientes de un nodo */
+function contarHooks(id) {
+  const m = meta[id];
+  if (m.nivel === 2) return m.clase === "hook" ? 1 : 0;   // los cuerpos no cuentan como hooks
+  return m.hijos.reduce((s, c) => s + contarHooks(c), 0);
+}
+
+/* =====================================================================
+   3) APARIENCIA DE LOS NODOS (según nivel)
+   ===================================================================== */
+function etiqueta(id) {
+  const m = meta[id];
+  if (m.nivel === 0) {
+    const flecha = m.expandido ? "▾" : "▸";
+    return flecha + " " + m.datos.tipo + "\n" + contarHooks(id) + " hooks";
+  }
+  if (m.nivel === 1) {
+    const flecha = m.expandido ? "▾" : "▸";
+    return flecha + " " + m.datos.nombre + " (" + m.hijos.length + ")";
+  }
+  if (m.clase === "cuerpo") return m.datos.id + " · " + m.datos.nombre;
+  return m.datos.id + " · " + m.datos.nombre;
+}
+
+function definirNodo(id) {
+  const m = meta[id];
+  if (m.nivel === 0) {
+    return {
+      id, label: etiqueta(id), shape: "box", margin: 14,
+      widthConstraint: { maximum: 190 },
+      color: { background: m.color, border: m.color, highlight: { background: m.color, border: "#ffffff" }, hover: { background: m.color, border: "#ffffff" } },
+      font: { color: "#0f1419", size: 17, face: "Inter, Segoe UI, Arial", bold: { color: "#0f1419" }, multi: false },
+      shapeProperties: { borderRadius: 14 }, borderWidth: 2, mass: 4
+    };
+  }
+  if (m.nivel === 1) {
+    return {
+      id, label: etiqueta(id), shape: "box", margin: 10,
+      color: { background: "#232b38", border: ENFOQUE_COLOR, highlight: { background: "#2c3646", border: "#ffffff" }, hover: { background: "#2c3646", border: "#ffffff" } },
+      font: { color: "#e6edf3", size: 15, face: "Inter, Segoe UI, Arial" },
+      shapeProperties: { borderRadius: 10 }, borderWidth: 2, mass: 2
+    };
+  }
+  /* Cuerpo: borde discontinuo ámbar para distinguirlo de los hooks */
+  if (m.clase === "cuerpo") {
+    return {
+      id, label: etiqueta(id), shape: "box", margin: 9,
+      widthConstraint: { maximum: 190 },
+      color: { background: "#2a2418", border: "#f5c26b", highlight: { background: "#3a3120", border: "#ffffff" }, hover: { background: "#3a3120", border: "#ffffff" } },
+      font: { color: "#f5d9a0", size: 12, face: "Inter, Segoe UI, Arial" },
+      shapeProperties: { borderRadius: 8, borderDashes: [5, 4] }, borderWidth: 1.5, mass: 1
+    };
+  }
+  /* Hook: etiqueta CORTA (id + nombre) con ajuste de línea; el texto largo va en el panel lateral */
+  return {
+    id, label: etiqueta(id), shape: "box", margin: 8,
+    widthConstraint: { maximum: 160 },
+    color: { background: "#161c24", border: m.color, highlight: { background: "#222b38", border: "#ffffff" }, hover: { background: "#222b38", border: "#ffffff" } },
+    font: { color: "#c9d4e0", size: 12, face: "Inter, Segoe UI, Arial" },
+    shapeProperties: { borderRadius: 8 }, borderWidth: 1, mass: 1
+  };
+}
+
+function definirArista(hijo) {
+  const m = meta[hijo];
+  return {
+    id: "e_" + hijo, from: m.padre, to: hijo,
+    color: { color: m.nivel === 1 ? m.color : "#3a4757", opacity: 0.8 },
+    width: m.nivel === 1 ? 2 : 1.2,
+    smooth: { type: "continuous" }
+  };
+}
+
+/* =====================================================================
+   4) RED (Vis.js) Y FÍSICA TIPO TELARAÑA
+   ===================================================================== */
+const nodes = new vis.DataSet();
+const edges = new vis.DataSet();
+
+topIds.forEach(id => nodes.add(definirNodo(id)));
+
+const container = document.getElementById("network");
+const options = {
+  physics: {
+    enabled: true,
+    solver: "forceAtlas2Based",
+    forceAtlas2Based: {
+      gravitationalConstant: -110,  // repulsión entre nodos (más negativo = se separan más)
+      centralGravity: 0.01,         // atracción suave al centro para que no se dispersen
+      springLength: 150,            // longitud "natural" de cada hilo
+      springConstant: 0.07,
+      damping: 0.5,
+      avoidOverlap: 1               // evita que los cuadros se solapen
+    },
+    stabilization: { iterations: 250, fit: true },
+    minVelocity: 0.4
+  },
+  interaction: { hover: true, dragNodes: true, zoomView: true, tooltipDelay: 150, multiselect: false },
+  nodes: { chosen: true }
+};
+const network = new vis.Network(container, { nodes, edges }, options);
+
+/* =====================================================================
+   5) EXPANDIR / COLAPSAR
+   Los nodos hijos se AÑADEN o se QUITAN del grafo (así los ocultos no
+   afectan a la física).
+   ===================================================================== */
+function actualizarEtiqueta(id) {
+  nodes.update({ id, label: etiqueta(id) });
+}
+
+function expandir(id) {
+  const m = meta[id];
+  if (m.nivel === 2 || m.expandido) return;
+
+  /* Los hijos nacen cerca del padre para que la animación sea natural */
+  const pos = network.getPositions([id])[id] || { x: 0, y: 0 };
+  m.hijos.forEach((h, i) => {
+    const ang = (i / m.hijos.length) * Math.PI * 2;
+    const def = definirNodo(h);
+    def.x = pos.x + Math.cos(ang) * 90;
+    def.y = pos.y + Math.sin(ang) * 90;
+    nodes.add(def);
+    edges.add(definirArista(h));
+  });
+  m.expandido = true;
+  actualizarEtiqueta(id);
+  network.startSimulation();
+}
+
+function colapsar(id) {
+  const m = meta[id];
+  if (!m.expandido) return;
+  m.hijos.forEach(h => {
+    colapsar(h);                       // primero cierra los descendientes
+    if (nodes.get(h)) nodes.remove(h);
+    if (edges.get("e_" + h)) edges.remove("e_" + h);
+  });
+  m.expandido = false;
+  actualizarEtiqueta(id);
+}
+
+function alternar(id) { meta[id].expandido ? colapsar(id) : expandir(id); }
+
+/* Asegura que todos los ancestros de un nodo estén abiertos */
+function abrirAncestros(id) {
+  const cadena = [];
+  let p = meta[id].padre;
+  while (p) { cadena.unshift(p); p = meta[p].padre; }
+  cadena.forEach(a => expandir(a));
+}
+
+/* =====================================================================
+   6) PANEL LATERAL DE DETALLE (aquí se lee el texto largo de los hooks)
+   ===================================================================== */
+const panel = document.getElementById("panel");
+
+function el(tag, cls, texto) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (texto !== undefined) e.textContent = texto;
+  return e;
+}
+function bloque(clave, valor) {
+  const b = el("div", "block");
+  b.appendChild(el("div", "k", clave));
+  b.appendChild(el("div", "v", valor));
+  return b;
+}
+
+function mostrarDetalle(id) {
+  const m = meta[id];
+  panel.innerHTML = "";
+  panel.appendChild(el("h2", null, m.nivel === 0 ? "Tipo de contenido" : m.nivel === 1 ? "Enfoque" : m.clase === "cuerpo" ? "Cuerpo" : "Hook"));
+
+  if (m.clase === "cuerpo") {
+    panel.appendChild(el("div", "crumb", m.tipoNombre + "  ›  " + m.enfoqueNombre));
+    panel.appendChild(el("p", "title", m.datos.id + " · " + m.datos.nombre));
+    m.datos.partes.forEach(p => panel.appendChild(bloque(p[0], p[1])));
+    panel.appendChild(el("p", "hint", "Encaja con cualquier hook de esta campaña. Test: mismo visual, mismo público y mismo presupuesto; solo cambia el hook (o solo el cuerpo si lo que quieres es comparar cuerpos)."));
+    return;
+  }
+
+  if (m.nivel === 2) {
+    panel.appendChild(el("div", "crumb", m.tipoNombre + "  ›  " + m.enfoqueNombre));
+    panel.appendChild(el("p", "title", m.datos.id + " · " + m.datos.nombre));
+    panel.appendChild(bloque("Texto del hook", "“" + m.datos.texto + "”"));
+    if (m.datos.variante) panel.appendChild(bloque("Variante", "“" + m.datos.variante + "”"));
+    if (m.datos.formato) panel.appendChild(bloque("Formato sugerido", m.datos.formato));
+    return;
+  }
+
+  if (m.nivel === 1) panel.appendChild(el("div", "crumb", m.tipoNombre));
+  panel.appendChild(el("p", "title", m.nivel === 0 ? m.datos.tipo : m.datos.nombre));
+  panel.appendChild(el("div", "crumb", contarHooks(id) + " hooks · " + m.hijos.length + (m.nivel === 0 ? " enfoques" : " elementos")));
+
+  const lista = el("div");
+  m.hijos.forEach(h => {
+    const mh = meta[h];
+    const chip = el("span", "chip", mh.nivel === 1 ? mh.datos.nombre + " (" + mh.hijos.length + ")" : mh.datos.id + " · " + mh.datos.nombre);
+    chip.style.borderLeft = "3px solid " + (mh.nivel === 1 ? ENFOQUE_COLOR : m.color);
+    chip.onclick = () => { abrirAncestros(h); if (meta[h].nivel < 2) expandir(h); seleccionar(h); actualizarContador(); };
+    lista.appendChild(chip);
+  });
+  panel.appendChild(lista);
+}
+
+function seleccionar(id) {
+  /* Espera un instante a que el nodo exista en el grafo y lo enfoca */
+  setTimeout(() => {
+    if (!nodes.get(id)) return;
+    network.selectNodes([id]);
+    network.focus(id, { scale: 1.1, animation: { duration: 500, easingFunction: "easeInOutQuad" } });
+    mostrarDetalle(id);
+  }, 60);
+}
+
+/* Clic: abre/cierra tipo o enfoque y muestra el detalle */
+network.on("click", params => {
+  if (!params.nodes.length) return;
+  const id = params.nodes[0];
+  if (meta[id].nivel < 2) alternar(id);
+  mostrarDetalle(id);
+  actualizarContador();
+});
+
+/* Cursor de mano al pasar por encima de un nodo */
+network.on("hoverNode", () => { container.style.cursor = "pointer"; });
+network.on("blurNode",  () => { container.style.cursor = "default"; });
+
+/* =====================================================================
+   7) BOTONES DE CONTROL
+   ===================================================================== */
+const contador = document.getElementById("count");
+function actualizarContador() {
+  const visibles = nodes.get().filter(n => meta[n.id].clase === "hook").length;
+  contador.textContent = visibles + " / " + contarTotalHooks() + " hooks visibles";
+}
+function contarTotalHooks() { return topIds.reduce((s, id) => s + contarHooks(id), 0); }
+
+function expandirNivel(hasta) {            // hasta: 1 = enfoques, 2 = hasta hooks
+  topIds.forEach(t => {
+    expandir(t);
+    if (hasta >= 2) meta[t].hijos.forEach(e => expandir(e));
+  });
+}
+
+document.getElementById("btnExpand").onclick = () => { expandirNivel(2); actualizarContador(); setTimeout(() => network.fit({ animation: true }), 600); };
+document.getElementById("btnHooks").onclick  = () => { topIds.forEach(t => meta[t].hijos.forEach(e => colapsar(e))); expandirNivel(1); actualizarContador(); setTimeout(() => network.fit({ animation: true }), 400); };
+document.getElementById("btnCollapse").onclick = () => { topIds.forEach(t => colapsar(t)); actualizarContador(); setTimeout(() => network.fit({ animation: true }), 300); };
+document.getElementById("btnFit").onclick = () => network.fit({ animation: true });
+
+let fisicaActiva = true;
+const btnFisica = document.getElementById("btnPhysics");
+btnFisica.onclick = () => {
+  fisicaActiva = !fisicaActiva;
+  network.setOptions({ physics: { enabled: fisicaActiva } });
+  btnFisica.textContent = "Física: " + (fisicaActiva ? "ON" : "OFF");
+  btnFisica.classList.toggle("on", fisicaActiva);
+};
+
+/* Búsqueda: abre las ramas donde aparece el texto y enfoca los resultados */
+document.getElementById("search").addEventListener("input", ev => {
+  const q = ev.target.value.trim().toLowerCase();
+  if (q.length < 2) { network.unselectAll(); return; }
+  const aciertos = Object.keys(meta).filter(id => {
+    const m = meta[id];
+    if (m.nivel !== 2) return false;
+    const d = m.datos;
+    const cuerpo = m.clase === "cuerpo" ? d.partes.map(p => p[1]).join(" ") : (d.texto + " " + d.variante + " " + d.formato);
+    return (d.id + " " + d.nombre + " " + cuerpo + " " + m.enfoqueNombre + " " + m.tipoNombre).toLowerCase().includes(q);
+  });
+  aciertos.forEach(abrirAncestros);
+  actualizarContador();
+  setTimeout(() => {
+    const presentes = aciertos.filter(id => nodes.get(id));
+    if (presentes.length) {
+      network.selectNodes(presentes);
+      network.fit({ nodes: presentes, animation: true });
+    }
+  }, 150);
+  contador.textContent = aciertos.length + " resultado(s) · " + contador.textContent;
+});
+
+/* =====================================================================
+   8) ARRANQUE: muestra los tipos de contenido con sus enfoques abiertos.
+   Los hooks se abren al hacer clic en cada enfoque (o con «Expandir todo»).
+   ===================================================================== */
+setTimeout(() => { expandirNivel(1); actualizarContador(); }, 100);
+setTimeout(() => network.fit({ animation: true }), 1200);
+</script>
+</body>
+</html>
