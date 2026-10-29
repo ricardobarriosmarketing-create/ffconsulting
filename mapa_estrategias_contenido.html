@@ -2,1184 +2,327 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mapa de guiones · Campaña → Hook → Cuerpo → Enfoque</title>
-
-<!-- Librería de renderizado: Vis.js Network (necesita internet para cargarse) -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mapa de estrategia · Google Ads Oberstaff</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.9/standalone/umd/vis-network.min.js"></script>
-
 <style>
-  /* ============ Estilo general (tema oscuro) ============ */
-  :root{ --bg:#0f1419; --panel:#161c24; --panel-2:#1d2530; --line:#2a3441; --text:#e6edf3; --muted:#8b98a8; --accent:#4cc9f0; --amber:#f5c26b; }
-  *{ box-sizing:border-box; }
-  html,body{ height:100%; margin:0; }
-  body{ background:var(--bg); color:var(--text); font-family:Inter,"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif; display:flex; flex-direction:column; }
-
-  header{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:12px 16px; background:var(--panel); border-bottom:1px solid var(--line); }
-  header h1{ font-size:16px; margin:0 12px 0 0; font-weight:650; }
-  header h1 span{ color:var(--muted); font-weight:400; }
-  button,input{ font:inherit; font-size:13px; color:var(--text); background:var(--panel-2); border:1px solid var(--line); border-radius:8px; padding:7px 12px; outline:none; }
-  button{ cursor:pointer; transition:background .15s,border-color .15s; }
-  button:hover{ background:#26303d; border-color:#3a4757; }
-  button.on{ border-color:var(--accent); color:var(--accent); }
-  input{ min-width:220px; } input:focus{ border-color:var(--accent); }
-  .spacer{ flex:1; }
-  #count{ color:var(--muted); font-size:12px; }
-  .legend{ display:flex; flex-wrap:wrap; gap:14px; align-items:center; font-size:12px; color:var(--muted); }
-  .legend i{ display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
-
-  main{ flex:1; display:flex; min-height:0; }
-  #network{ flex:1; min-width:0; }
-  aside{ width:430px; max-width:46vw; background:var(--panel); border-left:1px solid var(--line); padding:18px; overflow:auto; }
-  aside h2{ font-size:11px; letter-spacing:1.2px; text-transform:uppercase; color:var(--muted); margin:0 0 10px; }
-  .crumb{ font-size:12px; color:var(--muted); margin-bottom:8px; line-height:1.4; }
-  .title{ font-size:17px; font-weight:650; margin:0 0 12px; line-height:1.3; }
-  .hint{ color:var(--muted); font-size:13px; line-height:1.55; }
-
-  .block{ background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:10px; }
-  .block .k{ display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
-  .block .v{ font-size:14px; line-height:1.6; white-space:pre-wrap; }
-  .copy{ font-size:11px; padding:3px 9px; border-radius:99px; letter-spacing:.3px; text-transform:none; }
-  .primary{ width:100%; margin:4px 0 10px; padding:10px 12px; font-weight:600; background:#143a4a; border-color:var(--accent); color:#d8f4ff; }
-  .primary:hover{ background:#1b4b5f; }
-  .secondary{ width:100%; margin:0 0 8px; padding:8px 12px; text-align:left; }
-  mark.ph{ background:#4a3a12; color:#ffd98a; border-radius:4px; padding:0 3px; }
-  .warn{ background:#3a2f12; border:1px solid #6b5420; color:#ffd98a; border-radius:10px; padding:9px 12px; font-size:12.5px; line-height:1.5; margin-bottom:10px; }
-  .chip{ display:inline-block; font-size:12px; padding:4px 10px; border-radius:99px; margin:0 6px 6px 0; background:#26303d; cursor:pointer; border-left:3px solid var(--accent); }
-  .chip:hover{ background:#304052; }
-  details{ background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:10px 14px; margin-bottom:10px; }
-  summary{ cursor:pointer; font-size:13px; font-weight:600; }
-  details .inner{ margin-top:10px; }
-  details .inner .block{ background:#161c24; }
-  .sec{ font-size:11px; letter-spacing:1.2px; text-transform:uppercase; color:var(--muted); margin:14px 0 8px; }
-
-  #toast{ position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px); background:#143a4a; border:1px solid var(--accent); color:#d8f4ff; padding:9px 16px; border-radius:99px; font-size:13px; opacity:0; pointer-events:none; transition:all .25s; z-index:10; }
-  #toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
-
-  @media (max-width:820px){ main{ flex-direction:column; } aside{ width:100%; max-width:none; height:46%; border-left:none; border-top:1px solid var(--line); } }
+:root{--bg:#0f1419;--panel:#161c24;--p2:#1d2530;--line:#2a3441;--text:#e6edf3;--muted:#8b98a8;--accent:#4cc9f0;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font-family:Inter,"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;display:flex;flex-direction:column}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+header h1{font-size:16px;margin:0 12px 0 0;font-weight:650}
+header h1 span{color:var(--muted);font-weight:400}
+button,input{font:inherit;font-size:13px;color:var(--text);background:var(--p2);border:1px solid var(--line);border-radius:8px;padding:7px 12px;outline:none}
+button{cursor:pointer}
+button:hover{background:#26303d;border-color:#3a4757}
+button:focus-visible,input:focus-visible,summary:focus-visible,.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input{min-width:200px}
+#count{color:var(--muted);font-size:12px}
+.spacer{flex:1}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+main{flex:1;display:flex;min-height:0}
+#stage{flex:1;min-width:0;position:relative;overflow:hidden;background:radial-gradient(circle at 50% 50%,rgba(76,201,240,.07),transparent 55%),radial-gradient(circle,#1a222c 1px,transparent 1px) 0 0/28px 28px,var(--bg)}
+#network{position:absolute;inset:0}
+#pop{position:absolute;z-index:5;width:290px;background:rgba(22,28,36,.97);border:1px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:0 12px 32px rgba(0,0,0,.45);pointer-events:none;opacity:0;transition:opacity .12s}
+#pop.show{opacity:1}
+#pop b{display:block;font-size:14px;margin-bottom:5px}
+#pop span{font-size:13px;line-height:1.5}
+aside{width:380px;max-width:44vw;background:var(--panel);border-left:1px solid var(--line);padding:18px;overflow:auto}
+aside h2{font-size:17px;margin:0 0 10px;font-weight:650;line-height:1.3}
+.crumb{font-size:12px;color:var(--muted);margin-bottom:6px}
+.hint,.msg{font-size:13.5px;line-height:1.55;color:#c9d4e0}
+.msg{background:var(--p2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:0 0 14px}
+.block{background:var(--p2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:10px 0;font-size:14px;line-height:1.55}
+.chip{display:inline-block;font-size:12px;padding:4px 10px;border-radius:99px;margin:0 6px 6px 0;background:#26303d;cursor:pointer;border:0}
+.chip:hover{background:#304052}
+details.eje{border:1px solid var(--line);border-left-width:4px;border-radius:10px;margin-bottom:8px;background:var(--p2)}
+details.eje summary{cursor:pointer;padding:10px 14px;font-size:14px;font-weight:600;list-style:none;display:flex;gap:8px}
+details.eje summary::-webkit-details-marker{display:none}
+details.eje summary::before{content:"▸";transition:transform .15s}
+details.eje[open] summary::before{transform:rotate(90deg)}
+.eje .in{padding:0 14px 12px;font-size:13px;line-height:1.5}
+.eje h4{margin:10px 0 4px;font-size:13px;color:var(--muted);font-weight:600}
+.eje p{margin:0 0 6px}
+.back{margin-bottom:12px}
+@media (max-width:820px){main{flex-direction:column}aside{width:100%;max-width:none;height:42%;border-left:0;border-top:1px solid var(--line)}input{flex:1 1 100%;order:5}.legend{display:none}}
 </style>
 </head>
 <body>
-
 <header>
-  <h1>Mapa de guiones <span>· Campaña → Hook → Cuerpo → Enfoque</span></h1>
-  <button id="btnExpand">Expandir todo</button>
-  <button id="btnHooks">Solo hooks</button>
-  <button id="btnCollapse">Colapsar todo</button>
-  <button id="btnPhysics" class="on">Física: ON</button>
-  <button id="btnFit">Centrar</button>
-  <input id="search" type="search" placeholder="Buscar en hooks y cuerpos…">
-  <span id="count"></span>
-  <span class="spacer"></span>
-  <div class="legend">
-    <span><i style="background:#4cc9f0"></i>Campaña</span>
-    <span><i style="background:#2a3441;border:1px solid #8b98a8"></i>Hook</span>
-    <span><i style="background:#2a2418;border:1px dashed #f5c26b"></i>Cuerpo (texto final)</span>
-    <span><i style="background:#232b38;border:1px solid #9b8cff"></i>Enfoque</span>
-    <span>⚠ = tiene [datos por confirmar]</span>
-  </div>
+  <h1>Estrategia de Google Ads <span>· Centro → Eje → Grupo → Punto</span></h1>
+  <button id="bExp">Expandir todo</button>
+  <button id="bCol">Colapsar todo</button>
+  <button id="bLay">Reordenar</button>
+  <button id="bFit">Centrar</button>
+  <button id="bRes">Resumen ejecutivo</button>
+  <input id="q" type="search" placeholder="Buscar en los puntos…" aria-label="Buscar en los puntos">
+  <span id="count"></span><span class="spacer"></span>
+  <div class="legend"><span><i style="background:#4cc9f0;border-radius:50%"></i>Centro</span><span><i style="background:#ff6b9d"></i>Eje</span><span><i style="background:#232b38;border:1px solid #9b8cff"></i>Grupo</span><span><i style="background:#161c24;border:1px solid #8b98a8"></i>Punto</span></div>
 </header>
-
 <main>
-  <div id="network"></div>
-  <aside id="panel">
-    <h2>Detalle</h2>
-    <p class="hint">
-      <b>1.</b> Haz clic en una <b>campaña</b> para ver sus hooks y en un <b>hook</b> para ver los cuerpos que lo acompañan (y, en el hook ganador de ejemplo, sus enfoques).<br><br>
-      <b>2.</b> Haz clic en un <b>cuerpo</b> (borde discontinuo ámbar): aquí aparece el guion listo para grabar, con botón de <b>copiar</b> (hook + cuerpo, con el CTA ya incluido al final).<br><br>
-      <b>3.</b> Lo que aparece resaltado como <mark class="ph">[así]</mark> son datos reales que faltan y hay que confirmar con el cliente antes de grabar.<br><br>
-      Puedes arrastrar los nodos y hacer zoom con la rueda del ratón.
-    </p>
-  </aside>
+  <div id="stage"><div id="network"></div><div id="pop" role="tooltip"></div></div>
+  <aside id="panel"></aside>
 </main>
-<div id="toast"></div>
-
 <script>
-/* =====================================================================
-   1) DATOS — extraídos del documento Word «Guiones corregidos con sus
-   hooks y cuerpos». Para cambiar un texto, edítalo aquí.
-   Por campaña: hooks, avatares, esquemas de cuerpo, cuerpos finales
-   (por hook y avatar), enfoques del hook ganador, CTA y plan de test.
-   ===================================================================== */
-const DOC = [
- {
-  "tipo": "Summer Villas",
-  "ctas": [
-   "Escríbenos al DM la palabra VILLA y te decimos si tu villa califica.",
-   "Pulsa, deja tus datos y te contactamos para ver cuánto podría rendir tu villa."
-  ],
-  "extra": {},
-  "regla": "dentro de cada avatar, mismo cuerpo y mismo visual; solo cambia el hook.",
-  "hooks": [
-   {
-    "id": "H1",
-    "angulo": "Escasez / cupos",
-    "texto": "«Se buscan 3 propietarios de villa en Tenerife que quieran más reservas directas y menos comisiones.»",
-    "avatar": "P1 + P2"
-   },
-   {
-    "id": "H2",
-    "angulo": "Miedo a fiestas y daños",
-    "texto": "«¿Dejarías tu villa a un desconocido sin saber si organiza una fiesta? Nosotros ponemos sensores de ruido.»",
-    "avatar": "P1"
-   },
-   {
-    "id": "H3",
-    "angulo": "Propietario ausente",
-    "texto": "«Vives en Reino Unido, tu villa está en Tenerife y no sabes qué pasa ahí dentro.»",
-    "avatar": "P1"
-   },
-   {
-    "id": "H4",
-    "angulo": "Activo infrautilizado",
-    "texto": "«Si tienes una villa que pasa meses vacía en Canarias, tienes un activo mal aprovechado.»",
-    "avatar": "P1 + P2"
-   },
-   {
-    "id": "H5",
-    "angulo": "Comisión vs. neto",
-    "texto": "«“El 20% de comisión es caro.” Depende de a cuánto te salga el 80% restante.»",
-    "avatar": "P2 (y P1)"
-   },
-   {
-    "id": "H6",
-    "angulo": "Propietario saturado",
-    "texto": "«Mensajes de huéspedes a las 3 de la mañana, en inglés y en alemán… y tú con tu trabajo.»",
-    "avatar": "P2"
-   }
-  ],
-  "avatares": [
-   {
-    "nombre": "Perfil 1 (P1)",
-    "desc": "Propietario británico o de la península con villa con piscina en Costa Adeje que usa pocas semanas al año y quiere alquilar el resto. No vive en la isla, no tiene tiempo ni sabe gestionar reservas, limpiezas y huéspedes; le preocupa que cuiden la casa. Quiere ingresos y tranquilidad; decide él mismo."
-   },
-   {
-    "nombre": "Perfil 2 (P2)",
-    "desc": "Propietario local que intentó gestionarlo en Airbnb y está saturado: mensajes a todas horas, limpiezas, idiomas y ocupación irregular. Busca delegar y profesionalizar."
-   }
-  ],
-  "esquemas": [
-   {
-    "nombre": "P1 · Cuerpo 1 · Propuesta de valor",
-    "texto": "Dolor: usas tu villa en Costa Adeje pocas semanas al año y el resto está vacía o en manos de desconocidos, y tú estás lejos. Mecanismo: la publicamos en reserva directa, Airbnb y Booking con gestor de canales (sin overbooking); verificamos a cada huésped, instalamos sensores de ruido homologados y respondemos en inglés, español y alemán. Promesa + riesgo: informes claros para que sepas siempre qué pasa en tu casa. Sin cuota mensual: solo el 20% del neto cuando tu villa genera ingresos."
-   },
-   {
-    "nombre": "P1 · Cuerpo 2 · Cómo funciona",
-    "texto": "Dolor: no vives en la isla, no tienes tiempo para reservas, limpiezas ni huéspedes y te preocupa que no cuiden tu casa. Mecanismo: (1) analizamos tu villa y te decimos si califica; (2) nos ocupamos de canales, precios, mensajes, verificación de huéspedes y limpieza [confirmar alcance]; (3) recibes un informe y cobras tu neto. Promesa + riesgo: tú decides y sigues siendo el dueño. Sin cuota mensual, solo 20% del neto. [Confirmar rescisión sin penalización]."
-   },
-   {
-    "nombre": "P2 · Cuerpo 1 · Propuesta de valor",
-    "texto": "Dolor: ya la alquilas en Airbnb, pero los mensajes a todas horas, las limpiezas, los huéspedes en otros idiomas y una ocupación irregular te quitan los fines de semana. Mecanismo: asumimos mensajería multilingüe, limpiezas, precios por temporada y canales; tú sigues siendo el dueño y lo ves todo en un informe. Promesa + riesgo: recuperas tu tiempo sin perder ingresos. Sin cuota mensual: solo el 20% del neto."
-   },
-   {
-    "nombre": "P2 · Cuerpo 2 · De hacerlo tú a delegar",
-    "texto": "Dolor: llevas la villa tú solo y no sabes si ganas lo que podrías con las noches vacías y la comisión de plataforma. Mecanismo: (1) nos pasas tu calendario y anuncios actuales; (2) añadimos reserva directa y precios dinámicos y asumimos mensajes y limpiezas; (3) recibes un informe de resultados [confirmar si habrá comparativa con tu neto anterior]. Promesa + riesgo: delegas sin perder el control; sin cuota mensual, solo el 20% del neto."
-   }
-  ],
-  "finales": [
-   {
-    "hook": "H1 · Escasez / cupos",
-    "avatar": "P1 (ausente)",
-    "texto": "Publicamos tu villa en nuestra web de reserva directa, en Airbnb y en Booking a la vez, con un gestor de canales para que nunca haya overbooking. Verificamos a cada huésped y respondemos en español, inglés y alemán. Tú recibes informes claros. Sin cuota mensual: solo cobramos el 20% del neto. Escríbenos al DM la palabra VILLA."
-   },
-   {
-    "hook": "H1 · Escasez / cupos (versión P2)",
-    "avatar": "P2 (saturado)",
-    "texto": "Si ya alquilas en Airbnb, sabes lo que pesan las comisiones y los mensajes a todas horas. Nosotros añadimos reserva directa, asumimos mensajes, limpiezas y precios, y tú sigues siendo el dueño. Sin cuota mensual: solo el 20% del neto. Escríbenos la palabra VILLA y te decimos si tu villa califica."
-   },
-   {
-    "hook": "H2 · Miedo a fiestas y daños",
-    "avatar": "P1 (ausente)",
-    "texto": "Por eso verificamos a cada huésped antes de confirmar la reserva e instalamos sensores de ruido homologados que te avisan si algo se sale de lo normal. Además, respondemos a los huéspedes en español, inglés y alemán. Tú duermes tranquilo y recibes informes claros. Escríbenos al DM la palabra VILLA."
-   },
-   {
-    "hook": "H3 · Propietario ausente",
-    "avatar": "P1 (ausente)",
-    "texto": "Con nosotros lo sabes. Recibes un informe claro de lo que pasa en tu villa. Verificamos a cada huésped, hay sensores de ruido homologados y un equipo local que se ocupa de todo. Sin cuota mensual: solo cobramos el 20% del neto. Escríbenos VILLA y te decimos si tu villa califica."
-   },
-   {
-    "hook": "H4 · Activo infrautilizado",
-    "avatar": "P1 (ausente)",
-    "texto": "Una villa vacía sigue costando: seguro, piscina, suministros. Nosotros la publicamos en reserva directa, Airbnb y Booking, con precios por temporada y huéspedes verificados, y tú recibes informes claros. Sin cuota mensual: solo cobramos el 20% del neto cuando tu villa genera ingresos. Escríbenos VILLA."
-   },
-   {
-    "hook": "H4 · Activo infrautilizado (versión P2)",
-    "avatar": "P2 (saturado)",
-    "texto": "Si ya la alquilas pero la ocupación es irregular, hay noches que no vuelven. Añadimos reserva directa y precios dinámicos, y asumimos mensajes y limpiezas. Sin cuota mensual: solo el 20% del neto. Escríbenos VILLA y te decimos si tu villa califica."
-   },
-   {
-    "hook": "H5 · Comisión vs. neto",
-    "avatar": "P2 (saturado)",
-    "texto": "Gestionarlo tú parece gratis, hasta que cuentas las noches vacías, la comisión de plataforma y tus fines de semana. Nosotros añadimos reserva directa y precios dinámicos y nos encargamos de mensajes y limpiezas. Sin cuota mensual: solo cobramos el 20% del neto. Escríbenos VILLA y haz la cuenta."
-   },
-   {
-    "hook": "H5 · Comisión vs. neto (versión P1)",
-    "avatar": "P1 (ausente)",
-    "texto": "Con un gestor no pagas cuota mensual: solo el 20% del neto cuando tu villa genera ingresos. A cambio publicamos en reserva directa, Airbnb y Booking, verificamos huéspedes y te enviamos informes claros. Si no genera, no pagas. Escríbenos VILLA."
-   },
-   {
-    "hook": "H6 · Propietario saturado",
-    "avatar": "P2 (saturado)",
-    "texto": "Nosotros respondemos por ti, en español, inglés y alemán. Y además de los mensajes, nos encargamos de limpiezas, precios por temporada y canales, y tú lo ves todo en un informe. Recupera tus fines de semana. Sin cuota mensual: solo el 20% del neto. Escríbenos VILLA."
-   }
-  ],
-  "antes": "la redacción sobre licencias (H4) y la nueva ley canaria, cómo y cuándo se avisa al propietario con los sensores (H2), el contenido y la frecuencia del informe (H3), el horario de respuesta a huéspedes (H6) y las condiciones de rescisión. Para el propietario británico/irlandés (P1), duplicar el ganador en inglés.",
-  "ejemploHook": "H4",
-  "enfoques": [
-   {
-    "nombre": "Estadístico",
-    "hook": "«El [X]% de las villas vacacionales en Canarias pasa más de [X] meses al año sin reservas [fuente]. ¿La tuya es una de ellas?»"
-   },
-   {
-    "nombre": "Mito",
-    "hook": "«“Mi villa vacía no me cuesta nada.” Falso: IBI, seguro, piscina y suministros se pagan igual esté ocupada o vacía.»"
-   },
-   {
-    "nombre": "Especialidad",
-    "hook": "«Publicamos tu villa en reserva directa, Airbnb y Booking a la vez para que ninguna semana se quede sin reservar.»"
-   },
-   {
-    "nombre": "Autoridad",
-    "hook": "«[Fuente o experto verificable] afirma que [dato] sobre viviendas vacacionales infrautilizadas.»"
-   },
-   {
-    "nombre": "Storytelling",
-    "hook": "«[Caso real, p. ej. Villa Maronata, con permiso y cifras confirmadas]: pasó de [X] a [X] en [plazo].»"
-   },
-   {
-    "nombre": "Curiosidad",
-    "hook": "«Hay villas en Costa Adeje que casi no tocan un mensaje… y no tienen una sola noche vacía. Te enseño cómo.»"
-   }
-  ],
-  "plan": "Con 15 €/día: lanzar solo 3 anuncios (H1, H3, H4) con el Cuerpo 1, mismo visual. H2, H5 y H6 quedan para la siguiente tanda.",
-  "testeo": "Con 15 €/día: lanzar solo 3 anuncios (H1, H3, H4) con el Cuerpo 1, mismo visual. H2, H5 y H6 quedan para la siguiente tanda.",
-  "nombre": "Summer Villas"
- },
- {
-  "tipo": "Catalunya Casas",
-  "ctas": [
-   "Agenda una llamada y analizamos gratis cuánto está rindiendo tu propiedad.",
-   "Escríbenos al DM la palabra CAMBIO."
-  ],
-  "extra": {},
-  "regla": "dentro de cada avatar, mismo cuerpo y mismo visual; solo cambia el hook.",
-  "hooks": [
-   {
-    "id": "H1",
-    "angulo": "Escasez / se busca",
-    "texto": "«Se buscan 5 propietarios en Cataluña que sienten que su gestor no les da lo que prometió.»",
-    "avatar": "A + B"
-   },
-   {
-    "id": "H2",
-    "angulo": "Comunicación",
-    "texto": "«Si tu gestor tarda días en contestarte, tu casa está en piloto automático… y no es el tuyo.»",
-    "avatar": "B"
-   },
-   {
-    "id": "H3",
-    "angulo": "Miedo al cambio",
-    "texto": "«Cambiar de gestor no significa perder reservas. Nosotros migramos tus anuncios y calendarios.»",
-    "avatar": "B"
-   },
-   {
-    "id": "H4",
-    "angulo": "Tarifas poco claras",
-    "texto": "«¿Sabes exactamente cuánto te cobra tu gestor y por qué?»",
-    "avatar": "B"
-   },
-   {
-    "id": "H5",
-    "angulo": "Lo que dejas de ganar",
-    "texto": "«La pregunta no es si puedes cambiar de gestor. Es cuánto estás dejando de ganar por no hacerlo.»",
-    "avatar": "A + B"
-   },
-   {
-    "id": "H6",
-    "angulo": "Limpieza y reseñas",
-    "texto": "«Una limpieza mal hecha es una reseña de tres estrellas, y una reseña de tres estrellas son menos reservas el mes que viene.»",
-    "avatar": "B"
-   }
-  ],
-  "avatares": [
-   {
-    "nombre": "Avatar A",
-    "desc": "Propietario de una casa con piscina y licencia turística en Cataluña que piensa que podría generar mucho más. [Confirmar si la gestiona él mismo o ya tiene gestor]."
-   },
-   {
-    "nombre": "Avatar B",
-    "desc": "Propietario en Cataluña que ya tiene gestor y está decepcionado: comunicación lenta, ingresos por debajo del mercado, tarifas poco claras. Lo que frena el cambio es el esfuerzo de cambiar y el miedo a perder reservas."
-   }
-  ],
-  "esquemas": [
-   {
-    "nombre": "A · Cuerpo 1 · Tu texto base",
-    "texto": "«¿Tienes una casa con piscina con licencia turística en Cataluña y piensas que podrías generar mucho más? En Catalunya Casas llevamos más de [X] años ayudando a propietarios a rentabilizar sus propiedades a través del alquiler vacacional. Si tú también quieres, haz clic abajo y te contacto.» [El número de años lo dejé como [X]: confirmar la cifra real.]"
-   },
-   {
-    "nombre": "A · Cuerpo 2 · Cuánto puede rendir",
-    "texto": "Dolor: tienes una casa con piscina y licencia turística, y la sensación de que podría rendir bastante más. Mecanismo: (1) analizamos gratis cuánto puede generar tu casa; (2) la optimizamos con precios dinámicos, fotografía profesional, estancias mínimas y publicación en las principales plataformas [confirmar]; (3) te asignamos un gestor de cuenta con informes claros. Promesa + riesgo: sabrás cuánto puede rendir tu casa antes de decidir nada. [Confirmar comisión y condiciones]."
-   },
-   {
-    "nombre": "B · Cuerpo 1 · Propuesta de valor",
-    "texto": "Dolor: comunicación lenta, ingresos por debajo del mercado, tarifas poco claras. Si te suena, no estás solo. Mecanismo: gestor de cuenta dedicado; precios dinámicos basados en datos; estancias mínimas y temporadas optimizadas; fotografía profesional; limpieza e inspección con estándares medibles; informes financieros claros. Promesa + riesgo: la transición la hacemos nosotros, así que no pierdes reservas ni tiempo."
-   },
-   {
-    "nombre": "B · Cuerpo 2 · Cambio en 3 pasos",
-    "texto": "Dolor: sabes que tu casa podría rendir más, pero cambiar de gestor te da pereza y miedo a perder reservas. Mecanismo: (1) análisis gratis del rendimiento actual; (2) migramos anuncios, calendarios, precios y comunicación con huéspedes futuros; (3) gestor de cuenta con nombre propio e informe [frecuencia]. Promesa + riesgo: no pierdes reservas ni tiempo. [Confirmar comisión y permanencia]."
-   }
-  ],
-  "nota": "los hooks H2, H3, H4 y H6 asumen que el propietario ya tiene gestor (Avatar B). El Avatar A (casa con licencia que podría rendir más) solo queda cubierto por H1 y H5; si quieres, le preparo hooks propios.",
-  "finales": [
-   {
-    "hook": "H1 · Escasez / se busca",
-    "avatar": "B (gestor decepcionante)",
-    "texto": "Si tu gestor tarda en contestar, las tarifas no están claras o tu casa rinde menos de lo esperado, no estás solo. En Catalunya Casas te asignamos un gestor de cuenta con nombre propio, precios dinámicos e informes claros, y la transición la hacemos nosotros para que no pierdas reservas. Agenda una llamada y analizamos gratis cuánto está rindiendo tu propiedad."
-   },
-   {
-    "hook": "H1 · Escasez / se busca (versión A)",
-    "avatar": "A (quiere ganar más)",
-    "texto": "¿Tienes una casa con piscina y licencia turística en Cataluña y piensas que podrías generar mucho más? En Catalunya Casas llevamos más de [X] años ayudando a propietarios a rentabilizar sus propiedades con el alquiler vacacional. Analizamos gratis cuánto puede rendir tu casa. Haz clic y te contactamos."
-   },
-   {
-    "hook": "H2 · Comunicación",
-    "avatar": "B (gestor decepcionante)",
-    "texto": "Con nosotros no. Te asignamos un gestor de cuenta con nombre propio, que responde [plazo: confirmar] y te envía informes financieros claros. Además, optimizamos precios y estancias mínimas para que tu casa rinda. Escríbenos al DM la palabra CAMBIO y analizamos tu caso."
-   },
-   {
-    "hook": "H3 · Miedo al cambio",
-    "avatar": "B (gestor decepcionante)",
-    "texto": "Lo difícil no es cambiar de gestor, es seguir con uno que no responde. Nosotros nos encargamos de la transición: migramos anuncios, calendarios, precios y la comunicación con tus huéspedes futuros. Tú no pierdes reservas ni tiempo. Agenda una llamada y analizamos gratis cuánto está rindiendo tu propiedad."
-   },
-   {
-    "hook": "H4 · Tarifas poco claras",
-    "avatar": "B (gestor decepcionante)",
-    "texto": "Si la respuesta es no, es una señal de alerta. Con nosotros las tarifas son claras y recibes informes financieros de cada movimiento. Gestor de cuenta dedicado, precios dinámicos y limpieza con estándares medibles. Escríbenos CAMBIO y revisamos tus números sin compromiso."
-   },
-   {
-    "hook": "H5 · Lo que dejas de ganar",
-    "avatar": "B (gestor decepcionante)",
-    "texto": "Dos casas casi idénticas en la misma zona pueden ganar cifras muy distintas, y casi nunca es la casa: es cómo se gestionan los precios, las estancias mínimas y cómo aparece en cada plataforma. Analizamos gratis cuánto está rindiendo tu propiedad. Agenda una llamada."
-   },
-   {
-    "hook": "H5 · Lo que dejas de ganar (versión A)",
-    "avatar": "A (quiere ganar más)",
-    "texto": "Una casa con piscina y licencia turística puede rendir más de lo que imaginas. Analizamos gratis cuánto puede generar la tuya: precios dinámicos, estancias mínimas, fotografía profesional y un gestor que te rinde cuentas con informes claros. Haz clic y te contactamos."
-   },
-   {
-    "hook": "H6 · Limpieza y reseñas",
-    "avatar": "B (gestor decepcionante)",
-    "texto": "Por eso en Catalunya Casas la limpieza y la inspección siguen estándares medibles: revisamos cada entrada y cada salida para cuidar tus reseñas y mantener tu calendario lleno. Con gestor de cuenta dedicado e informes claros. Escríbenos CAMBIO y analizamos tu caso."
-   }
-  ],
-  "antes": "los años de experiencia (A), el plazo de respuesta del gestor (H2), cómo se detallan las tarifas (H4), el proceso de limpieza e inspección (H6) y las condiciones de comisión y permanencia.",
-  "ejemploHook": "H3",
-  "enfoques": [
-   {
-    "nombre": "Estadístico",
-    "hook": "«El [X]% de los propietarios que se plantean cambiar de gestor no lo hace por miedo a perder reservas [fuente]. Con una migración bien hecha, no se pierde ninguna.»"
-   },
-   {
-    "nombre": "Mito",
-    "hook": "«“Cambiar de gestor es un lío y se pierden reservas.” Falso: migramos anuncios, calendarios, precios y la comunicación con huéspedes futuros.»"
-   },
-   {
-    "nombre": "Especialidad",
-    "hook": "«Tenemos un proceso de migración en [X] días para propietarios de VUT en Cataluña: tú no tocas nada.»"
-   },
-   {
-    "nombre": "Autoridad",
-    "hook": "«[Fuente o experto verificable] recomienda revisar el rendimiento de tu gestor al menos cada [X] meses.»"
-   },
-   {
-    "nombre": "Storytelling",
-    "hook": "«[Nombre/zona] llevaba [X] meses con un gestor que no respondía. Migramos su calendario en [X] días y hoy [resultado real].»"
-   },
-   {
-    "nombre": "Curiosidad",
-    "hook": "«¿Por qué algunas casas cambian de gestor y no pierden ni una reserva? Te enseño qué se hace en la primera semana.»"
-   }
-  ],
-  "plan": "4–5 anuncios con el Cuerpo 1 y el mismo visual. Prioridad de lanzamiento: H3, H5, H2, H1 (H4 y H6 en la siguiente tanda).",
-  "testeo": "4–5 anuncios con el Cuerpo 1 y el mismo visual. Prioridad de lanzamiento: H3, H5, H2, H1 (H4 y H6 en la siguiente tanda).",
-  "nombre": "Catalunya Casas"
- },
- {
-  "tipo": "Studio Reina – Micro",
-  "ctas": [
-   "Escríbenos al DM la palabra CEJAS y te decimos si eres candidata.",
-   "Reserva tu valoración en [enlace / calendario]."
-  ],
-  "extra": {},
-  "regla": "dentro de cada avatar, mismo cuerpo y mismo visual; solo cambia el hook.",
-  "hooks": [
-   {
-    "id": "H1",
-    "angulo": "Tiempo / rutina",
-    "texto": "«¿Cuántos minutos de tu mañana se van en dibujarte las cejas? 10 minutos al día son más de 60 horas al año.»",
-    "avatar": "A2"
-   },
-   {
-    "id": "H2",
-    "angulo": "Inseguridad sin maquillaje",
-    "texto": "«¿Te da cosa que te vean sin maquillar? Tus cejas no deberían decidir eso.»",
-    "avatar": "A1"
-   },
-   {
-    "id": "H3",
-    "angulo": "Miedo al resultado artificial",
-    "texto": "«No todas las cejas micropigmentadas se ven pintadas. Depende de cómo se diseñen.»",
-    "avatar": "A1 + A2"
-   },
-   {
-    "id": "H4",
-    "angulo": "Miedo al dolor",
-    "texto": "«¿Te da miedo que duela? Te cuento qué se siente de verdad en la sesión.»",
-    "avatar": "A1 + A2"
-   },
-   {
-    "id": "H5",
-    "angulo": "Diseño personalizado",
-    "texto": "«Tu cara no es igual que la de nadie. Tus cejas tampoco deberían serlo.»",
-    "avatar": "A1"
-   },
-   {
-    "id": "H6",
-    "angulo": "Escasez / oferta",
-    "texto": "«Se buscan [X] clientas en Valencia para [oferta/valoración]. Plazas hasta [fecha].»",
-    "avatar": "A1 + A2"
-   }
-  ],
-  "avatares": [
-   {
-    "nombre": "Avatar 1 (A1)",
-    "desc": "Mujer de 25–55 años, trabajadora, de la zona, ingresos medios o medio-altos, interesada en estética, bienestar e imagen. Se cuida, pero no está satisfecha con su imagen (inseguridad por rasgos como las cejas). Quiere verse más arreglada, segura y cómoda sin parecer artificial. Detrás: recuperar seguridad, verse bien cada día sin depender del maquillaje. Objeciones: «¿quedará natural?», «¿duele?», «¿funcionará en mi caso?», «es caro», «no quiero algo exagerado»."
-   },
-   {
-    "nombre": "Avatar 2 (A2)",
-    "desc": "Madre o mujer empresaria que quiere estar más arreglada en menos tiempo."
-   }
-  ],
-  "esquemas": [
-   {
-    "nombre": "A1 · Cuerpo 1 · Especialidad",
-    "texto": "Dolor: te cuidas, pero hay algo en tu imagen, como las cejas, con lo que no terminas de sentirte cómoda. No es solo estética: es verte bien cada día sin depender del maquillaje. Mecanismo: diseñamos tus cejas a medida según tu rostro [técnica: confirmar] y no pigmentamos hasta que tú apruebas el diseño; antes hacemos una valoración para ver si es para ti. Promesa + riesgo: un resultado natural, nada exagerado. [Retoque/garantía y facilidades de pago: confirmar]."
-   },
-   {
-    "nombre": "A1 · Cuerpo 2 · Dudas y sesión",
-    "texto": "Dolor: te frenan las dudas: «¿quedará natural?», «¿duele?», «¿funcionará en mi caso?». Mecanismo: (1) valoración y diseño personalizado; (2) aprobación del trazado antes de pigmentar; (3) sesión [con anestesia tópica: confirmar] y revisión/retoque a las [X] semanas. Promesa + riesgo: sales sabiendo cómo van a quedar tus cejas. [Precio y oferta: confirmar]."
-   },
-   {
-    "nombre": "A2 · Cuerpo 1 · Menos tiempo",
-    "texto": "Dolor: entre trabajo, hijos y negocio, arreglarte cada mañana es lo primero que sacrificas. Mecanismo: la micropigmentación de cejas, diseñada a medida, te deja arreglada desde que te despiertas [técnica y duración: confirmar]. Promesa + riesgo: menos minutos delante del espejo cada día y un resultado natural. [Retoque/garantía: confirmar]."
-   },
-   {
-    "nombre": "A2 · Cuerpo 2 · Cómo es la sesión",
-    "texto": "Dolor: no tienes tiempo para otra cita complicada ni para un resultado que luego tengas que corregir. Mecanismo: (1) valoración rápida [duración: confirmar]; (2) diseño aprobado por ti antes de pigmentar; (3) sesión [duración] y revisión a las [X] semanas, con horarios [compatibles con tu agenda: confirmar]. Promesa + riesgo: arreglada en menos tiempo, sin parecer artificial."
-   }
-  ],
-  "finales": [
-   {
-    "hook": "H1 · Tiempo / rutina",
-    "avatar": "A2 (madre / empresaria)",
-    "texto": "Entre el trabajo, los niños y todo lo demás, esos minutos valen oro. En Studio Reina diseñamos tus cejas a medida y las micropigmentamos para que te levantes ya arreglada [técnica y duración del resultado: confirmar]. Resultado natural, nada exagerado. Escríbenos al DM la palabra CEJAS y te decimos si eres candidata."
-   },
-   {
-    "hook": "H2 · Inseguridad sin maquillaje",
-    "avatar": "A1 (se cuida)",
-    "texto": "No se trata solo de estética: es verte bien cada día sin depender del maquillaje. En Studio Reina diseñamos tus cejas a medida según tu rostro y no pigmentamos hasta que tú apruebas el diseño. Natural, sin exagerar. Escríbenos CEJAS y te decimos si eres candidata."
-   },
-   {
-    "hook": "H3 · Miedo al resultado artificial",
-    "avatar": "A1 (se cuida)",
-    "texto": "Por eso aquí empezamos por una valoración y un diseño a medida de tu rostro, y no pigmentamos hasta que tú lo apruebas. Así sabes cómo van a quedar antes de empezar. Resultado natural, nada exagerado. Escríbenos CEJAS y reserva tu valoración."
-   },
-   {
-    "hook": "H3 · Miedo al resultado artificial (versión A2)",
-    "avatar": "A2 (madre / empresaria)",
-    "texto": "Si tienes poco tiempo y no quieres un resultado que luego haya que corregir, empieza por el diseño. Hacemos una valoración rápida [duración: confirmar], diseñas tus cejas con nosotros y apruebas el trazado antes de pigmentar. Natural y sin complicaciones. Escríbenos CEJAS."
-   },
-   {
-    "hook": "H4 · Miedo al dolor",
-    "avatar": "A1 (se cuida)",
-    "texto": "Te lo contamos sin adornos: qué sientes, cuánto dura la sesión y qué hacemos para que estés cómoda [anestesia tópica y duración: confirmar]. Y antes de empezar, validamos el diseño contigo. Escríbenos CEJAS y resolvemos tus dudas."
-   },
-   {
-    "hook": "H4 · Miedo al dolor (versión A2)",
-    "avatar": "A2 (madre / empresaria)",
-    "texto": "Si no tienes tiempo para una cita complicada, tranquila: te explicamos cuánto dura cada paso [valoración, sesión y revisión: confirmar] y qué se siente en la sesión. Valoración, diseño aprobado por ti y sesión. Escríbenos CEJAS."
-   },
-   {
-    "hook": "H5 · Diseño personalizado",
-    "avatar": "A1 (se cuida)",
-    "texto": "Por eso no usamos una plantilla. Estudiamos tu rostro, diseñamos tus cejas a medida y las apruebas antes de pigmentar. El resultado: cejas naturales que te favorecen, sin parecer artificial. Escríbenos CEJAS y reserva tu valoración."
-   },
-   {
-    "hook": "H6 · Escasez / oferta",
-    "avatar": "A1 (se cuida)",
-    "texto": "Si llevas tiempo pensando en tus cejas y no te decides, este es un buen momento. [Oferta: confirmar]. Valoración y diseño a medida, y no pigmentamos hasta que tú apruebas. Plazas limitadas hasta [fecha]. Escríbenos CEJAS."
-   },
-   {
-    "hook": "H6 · Escasez / oferta (versión A2)",
-    "avatar": "A2 (madre / empresaria)",
-    "texto": "Si nunca encuentras tiempo para ti, reserva ahora tu valoración con [oferta: confirmar]. Diseño a medida, resultado natural y menos minutos delante del espejo cada día. Plazas hasta [fecha]. Escríbenos CEJAS."
-   }
-  ],
-  "antes": "la técnica, la duración de la sesión y del resultado, la anestesia tópica, el retoque o garantía, el precio y la oferta con su fecha. Todo el bloque asume que «Micro» es micropigmentación de cejas; si son mini tatuajes, hay que reescribirlo.",
-  "ejemploHook": "H3",
-  "enfoques": [
-   {
-    "nombre": "Estadístico",
-    "hook": "«El [X]% de las mujeres que dudan de la micropigmentación lo hace por miedo a un resultado artificial [fuente].»"
-   },
-   {
-    "nombre": "Mito",
-    "hook": "«“La micropigmentación siempre se ve falsa.” Falso: lo que se ve falso es un diseño que no se adapta a tu rostro.»"
-   },
-   {
-    "nombre": "Especialidad",
-    "hook": "«Trazamos tus cejas pelo a pelo [confirmar técnica] y las apruebas antes de pigmentar.»"
-   },
-   {
-    "nombre": "Autoridad",
-    "hook": "«[Profesional o fuente verificable] explica por qué el diseño previo marca la diferencia en un resultado natural.»"
-   },
-   {
-    "nombre": "Storytelling",
-    "hook": "«[Nombre, con permiso] llegó con miedo a que le quedaran cejas pintadas. Así fue su proceso: [resultado real].»"
-   },
-   {
-    "nombre": "Curiosidad",
-    "hook": "«¿Por qué unas cejas micropigmentadas se notan y otras no? Casi siempre es el diseño, no la piel.»"
-   }
-  ],
-  "plan": "3–4 anuncios con el Cuerpo 1 y el mismo visual, tras revisar oferta, público y formulario. Prioridad: H3, H1, H5, H2. Supuesto: Micro = micropigmentación de cejas.",
-  "testeo": "3–4 anuncios con el Cuerpo 1 y el mismo visual, tras revisar oferta, público y formulario. Prioridad: H3, H1, H5, H2. Supuesto: Micro = micropigmentación de cejas.",
-  "nombre": "Studio Reina – Micro"
- },
- {
-  "tipo": "Habitando Madrid",
-  "ctas": [
-   "Haz clic y agenda tu visita personalizada.",
-   "Escríbenos al DM la palabra CHALET y te enviamos la ficha completa."
-  ],
-  "extra": {},
-  "regla": "dentro de cada avatar, mismo cuerpo y mismo visual; solo cambia el hook. Visual sugerido: las fotos reales del chalet de los posts actuales.",
-  "inmueble": [
-   {
-    "dato": "Tipo / ubicación",
-    "contenido": "Chalet en Las Rozas, urbanización Los Porches, Madrid",
-    "fuente": "Posts estáticos"
-   },
-   {
-    "dato": "Dormitorios / baños",
-    "contenido": "4 dormitorios amplios · 4 baños completos",
-    "fuente": "Posts estáticos"
-   },
-   {
-    "dato": "Salones / garaje",
-    "contenido": "2 salones espaciosos · 1 garaje privado",
-    "fuente": "Posts estáticos"
-   },
-   {
-    "dato": "Jardín",
-    "contenido": "Mencionado en los posts verdes y negros («con jardín»), no en el post azul",
-    "fuente": "Posts estáticos: confirmar que es jardín propio"
-   },
-   {
-    "dato": "Mensajes de marca",
-    "contenido": "«Perfecta casa familiar», «muy luminosa y amplia», «100% real y sin filtros», «visitas personalizadas»",
-    "fuente": "Post azul"
-   },
-   {
-    "dato": "Falta",
-    "contenido": "Precio, m² de vivienda y parcela, año, estado, gastos, distancia a Madrid, colegios y servicios cercanos",
-    "fuente": "Pedir al cliente"
-   }
-  ],
-  "hooks": [
-   {
-    "id": "H1",
-    "angulo": "Espacio para la familia",
-    "texto": "«¿Tu piso se te ha quedado pequeño? Aquí cada uno tiene su dormitorio: 4 dormitorios amplios.»",
-    "variante": "«Cuatro dormitorios amplios, jardín y espacio de sobra para que tu familia crezca.»",
-    "avatar": "A"
-   },
-   {
-    "id": "H2",
-    "angulo": "Dos salones",
-    "texto": "«Un salón para la familia y otro para ti. En este chalet de Las Rozas caben los dos.»",
-    "variante": "«Dos salones espaciosos: uno para los niños y otro para cuando se acuestan.»",
-    "avatar": "A"
-   },
-   {
-    "id": "H3",
-    "angulo": "Sin filtros (transparencia)",
-    "texto": "«Lo que ves en las fotos es lo que encuentras. Casa 100% real y sin filtros.»",
-    "variante": "«¿Cuántas casas has visitado que no se parecían a sus fotos? Esta sí.»",
-    "avatar": "B (y A)"
-   },
-   {
-    "id": "H4",
-    "angulo": "Ubicación exclusiva",
-    "texto": "«Chalet en la urbanización Los Porches, Las Rozas: una ubicación exclusiva para tu familia.»",
-    "variante": "«Una casa familiar en una de las mejores zonas de Madrid.» [validar la afirmación]",
-    "avatar": "A + B"
-   },
-   {
-    "id": "H5",
-    "angulo": "Comodidad del día a día",
-    "texto": "«Cuatro baños completos y garaje privado: las mañanas con prisas ya no son una pelea.»",
-    "variante": "«4 baños, 1 garaje privado, 0 colas por las mañanas.»",
-    "avatar": "A"
-   },
-   {
-    "id": "H6",
-    "angulo": "Visitas personalizadas",
-    "texto": "«Esta casa se ve con cita y sin prisas: agenda tu visita personalizada.»",
-    "variante": "«Hay [X] huecos de visita esta semana. Agenda el tuyo.» [confirmar disponibilidad]",
-    "avatar": "B (y A)"
-   }
-  ],
-  "avatares": [
-   {
-    "nombre": "Avatar A · Familia que necesita más espacio",
-    "desc": "Persona de Madrid con familia que quiere comprar una casa más grande que su piso actual. Lo que busca de verdad es comodidad y tiempo en familia: que cada uno tenga su espacio, dormir bien, no andar apretados. Teme equivocarse en una compra grande y que la casa no sea lo que parecía. [Rango de edad, zona de origen y presupuesto: confirmar con el cliente]."
-   },
-   {
-    "nombre": "Avatar B · Comprador que ya ha visto muchas casas",
-    "desc": "Persona de Madrid que quiere comprar vivienda y ya ha visitado varias que no coincidían con las fotos o con lo que decía el anuncio. Valora la transparencia y no perder tiempo. Objeciones: «¿será como en las fotos?», «¿merece la pena desplazarme a verla?», «¿me van a presionar?». [Confirmar con el cliente]."
-   }
-  ],
-  "esquemas": [
-   {
-    "nombre": "A · Cuerpo 1 · Propuesta de valor",
-    "texto": "Dolor: tu familia crece y tu piso se queda pequeño: dormitorios justos, un solo salón, mañanas con cola para el baño. Mecanismo: un chalet en Las Rozas, urbanización Los Porches, con 4 dormitorios amplios, 4 baños completos, 2 salones espaciosos, garaje privado y jardín [confirmar m² de vivienda y parcela]. Promesa + riesgo: espacio y luz de sobra desde el primer día, y la tranquilidad de verla con visita personalizada antes de decidir nada."
-   },
-   {
-    "nombre": "A · Cuerpo 2 · Cómo es la visita",
-    "texto": "Dolor: una compra así impone y no sabes si la casa encaja con tu día a día. Mecanismo: (1) agendas tu visita personalizada; (2) recorres la casa con calma y resolvemos tus dudas sobre [precio, gastos, año de construcción, estado: confirmar]; (3) si encaja, te explicamos los siguientes pasos [financiación y trámites: confirmar]. Promesa + riesgo: ves cómo sería vivir aquí antes de decidir, sin compromiso."
-   },
-   {
-    "nombre": "B · Cuerpo 1 · Lo que ves es lo que es",
-    "texto": "Dolor: has visto casas cuyas fotos no se parecían a la realidad y has perdido tardes en visitas que no encajaban. Mecanismo: aquí las fotos son reales y sin filtros; antes de visitar te damos la ficha completa [m², precio, año, gastos: confirmar]. Promesa + riesgo: solo visitas una casa que de verdad encaja contigo: 4 dormitorios, 4 baños, 2 salones, garaje privado y jardín."
-   },
-   {
-    "nombre": "B · Cuerpo 2 · Visita sin compromiso",
-    "texto": "Dolor: temes perder el tiempo o que te presionen para decidir. Mecanismo: (1) agendas la cita en el horario que te vaya bien; (2) un asesor de Habitando Madrid te enseña la casa y responde a tus preguntas; (3) decides con calma. Promesa + riesgo: visita personalizada, sin prisas y sin compromiso [confirmar condiciones]."
-   }
-  ],
-  "ejemploHook": "H1",
-  "enfoques": [
-   {
-    "nombre": "Estadístico",
-    "hook": "«El [X]% de las familias que compran una casa lo hacen por falta de espacio en su vivienda actual [fuente verificable].»"
-   },
-   {
-    "nombre": "Mito",
-    "hook": "«“Para tener espacio, jardín y dos salones hay que irse muy lejos.” Esta casa está en Las Rozas, urbanización Los Porches [validar distancia y tiempos a Madrid].»"
-   },
-   {
-    "nombre": "Especialidad",
-    "hook": "«En Habitando Madrid enseñamos cada casa con visita personalizada, para que veas si encaja con tu familia [confirmar experiencia en la zona].»"
-   },
-   {
-    "nombre": "Autoridad",
-    "hook": "«[Experto o fuente verificable] señala que el espacio es el motivo principal para cambiar de vivienda [dato y fuente].»"
-   },
-   {
-    "nombre": "Storytelling",
-    "hook": "«[Familia compradora o caso real de Habitando Madrid, con permiso]: pasaron de un piso de [X] dormitorios a una casa con [X], y hoy [resultado real].»"
-   },
-   {
-    "nombre": "Curiosidad",
-    "hook": "«¿Cuántos baños necesita de verdad una familia de cuatro? En esta casa de Las Rozas hay cuatro. Te enseño cómo se vive.»"
-   }
-  ],
-  "esqHook": [
-   {
-    "hook": "H1 · Espacio para la familia\n«¿Tu piso se te ha quedado pequeño? Aquí cada uno tiene su dormitorio: 4 dormitorios amplios.»",
-    "avatar": "A (familia)",
-    "texto": "Dolor: dormitorios justos, poco sitio para cada uno y la sensación de vivir apretados. Mecanismo: este chalet en Las Rozas, urbanización Los Porches, tiene 4 dormitorios amplios, 2 salones espaciosos, 4 baños completos, garaje privado y jardín [confirmar jardín y m²]. Promesa + riesgo: espacio para que cada uno tenga el suyo, y lo compruebas en una visita personalizada antes de decidir nada."
-   },
-   {
-    "hook": "H2 · Dos salones\n«Un salón para la familia y otro para ti. En este chalet de Las Rozas caben los dos.»",
-    "avatar": "A (familia)",
-    "texto": "Dolor: un solo salón para todo (tele, deberes, visitas, descanso) y nadie tiene su momento. Mecanismo: dos salones espaciosos: uno para la vida en familia y otro para desconectar o recibir, más 4 dormitorios amplios y una casa muy luminosa. Promesa + riesgo: espacio para convivir y también para tener tu rincón; la ves en una visita personalizada."
-   },
-   {
-    "hook": "H3 · Sin filtros\n«Lo que ves en las fotos es lo que encuentras. Casa 100% real y sin filtros.»",
-    "avatar": "B (comprador desconfiado)",
-    "texto": "Dolor: has visto fotos que prometían una casa y la visita fue otra cosa. Mecanismo: aquí las fotos son 100% reales y sin filtros, y antes de visitar te damos la ficha completa [m², precio y gastos: confirmar]. Promesa + riesgo: lo que ves es lo que es: solo visitas si de verdad encaja contigo."
-   },
-   {
-    "hook": "H3 · Sin filtros (versión para A)",
-    "avatar": "A (familia)",
-    "texto": "Dolor: una compra familiar de este tamaño no admite sorpresas. Mecanismo: fotos reales, ficha completa y una visita personalizada en la que recorres cada estancia con calma: 4 dormitorios, 4 baños, 2 salones, garaje privado y jardín [confirmar jardín]. Promesa + riesgo: decides con toda la información sobre la mesa."
-   },
-   {
-    "hook": "H4 · Ubicación exclusiva\n«Chalet en la urbanización Los Porches, Las Rozas: una ubicación exclusiva para tu familia.»",
-    "avatar": "A (familia)",
-    "texto": "Dolor: quieres más espacio para tu familia sin renunciar a una buena zona. Mecanismo: una casa de 4 dormitorios, 4 baños, 2 salones y garaje privado en la urbanización Los Porches, en Las Rozas [distancia a Madrid, colegios y servicios: confirmar con datos reales]. Promesa + riesgo: ubicación exclusiva y espacio de sobra; la visitas con cita y sin compromiso [confirmar]."
-   },
-   {
-    "hook": "H4 · Ubicación exclusiva (versión para B)",
-    "avatar": "B (comprador desconfiado)",
-    "texto": "Dolor: casas bien ubicadas en el anuncio que luego no lo eran tanto, o con fotos que no coincidían. Mecanismo: ubicación exclusiva en Los Porches (Las Rozas), fotos 100% reales y ficha completa antes de ir [datos de la zona: confirmar]. Promesa + riesgo: compruebas la zona y la casa en una visita personalizada, sin compromiso [confirmar]."
-   },
-   {
-    "hook": "H5 · Comodidad del día a día\n«Cuatro baños completos y garaje privado: las mañanas con prisas ya no son una pelea.»",
-    "avatar": "A (familia)",
-    "texto": "Dolor: mañanas con prisas, cola para el baño y vueltas buscando aparcamiento. Mecanismo: 4 baños completos, garaje privado y 4 dormitorios amplios, en una casa pensada para vivir en familia. Promesa + riesgo: días más fáciles desde el primer momento; lo ves en una visita personalizada antes de decidir."
-   },
-   {
-    "hook": "H6 · Visitas personalizadas\n«Esta casa se ve con cita y sin prisas: agenda tu visita personalizada.»",
-    "avatar": "B (comprador desconfiado)",
-    "texto": "Dolor: visitas aceleradas, poco tiempo para preguntar y presión para decidir. Mecanismo: eliges el horario, un asesor de Habitando Madrid te enseña la casa sin prisas y recibes la ficha completa [confirmar si la visita es individual]. Promesa + riesgo: decides con calma y sin compromiso [confirmar condiciones]."
-   },
-   {
-    "hook": "H6 · Visitas personalizadas (versión para A)",
-    "avatar": "A (familia)",
-    "texto": "Dolor: organizar una visita con toda la familia cuando no hay tiempo. Mecanismo: agendas la cita en el horario que os venga bien a todos [confirmar flexibilidad] y recorréis cada estancia con calma: 4 dormitorios, 4 baños, 2 salones, garaje privado y jardín. Promesa + riesgo: venís en familia a comprobar si es vuestra casa, sin compromiso [confirmar]."
-   }
-  ],
-  "finales": [
-   {
-    "hook": "H1 · Espacio para la familia",
-    "avatar": "A (familia)",
-    "texto": "Cuatro dormitorios amplios, dos salones espaciosos y cuatro baños completos. Y sí, también garaje privado y jardín. Es un chalet en la urbanización Los Porches, en Las Rozas, pensado para que cada uno de tu familia tenga su espacio. Mira cómo es por dentro y agenda tu visita personalizada. Haz clic."
-   },
-   {
-    "hook": "H2 · Dos salones",
-    "avatar": "A (familia)",
-    "texto": "Un salón para ver una peli en familia. Otro para trabajar, leer o simplemente desconectar. Esta casa de Las Rozas tiene dos salones espaciosos, cuatro dormitorios amplios y mucha luz natural. Ven a verla en una visita personalizada y comprueba si encaja con tu día a día. Haz clic y agenda."
-   },
-   {
-    "hook": "H3 · Sin filtros",
-    "avatar": "B (comprador desconfiado)",
-    "texto": "Sabemos lo que pasa: ves unas fotos increíbles, vas a la visita y la casa no se parece en nada. Aquí no. Estas fotos son 100% reales y sin filtros, y antes de ir te enviamos la ficha completa. Así solo la visitas si de verdad te encaja. Haz clic y pide la ficha."
-   },
-   {
-    "hook": "H3 · Sin filtros (versión A)",
-    "avatar": "A (familia)",
-    "texto": "Comprar una casa familiar es una decisión grande y no deberían quedar sorpresas. Por eso te enseñamos fotos reales, sin filtros, y te damos toda la información antes de visitarla. Después la recorres con calma: cuatro dormitorios, cuatro baños, dos salones y garaje privado. Haz clic y agenda tu visita."
-   },
-   {
-    "hook": "H4 · Ubicación exclusiva",
-    "avatar": "A (familia)",
-    "texto": "En la urbanización Los Porches, en Las Rozas, hay un chalet de cuatro dormitorios, cuatro baños completos y dos salones, con garaje privado. Espacio para tu familia en una ubicación exclusiva. Descubre cómo es por dentro y agenda tu visita personalizada. Haz clic."
-   },
-   {
-    "hook": "H4 · Ubicación exclusiva (versión B)",
-    "avatar": "B (comprador desconfiado)",
-    "texto": "Una buena ubicación no sirve de nada si la casa no es lo que te prometieron. Este chalet está en la urbanización Los Porches, en Las Rozas, y todo lo que ves es real: fotos sin filtros y ficha completa antes de visitarlo. Compruébalo tú mismo, sin compromiso. Haz clic."
-   },
-   {
-    "hook": "H5 · Comodidad del día a día",
-    "avatar": "A (familia)",
-    "texto": "Cuatro baños completos para que nadie espere por la mañana. Garaje privado para llegar y aparcar sin dar vueltas. Y cuatro dormitorios amplios para toda la familia. Es el chalet de Las Rozas que hace el día a día más fácil. Agenda tu visita personalizada y velo en persona. Haz clic."
-   },
-   {
-    "hook": "H6 · Visitas personalizadas",
-    "avatar": "B (comprador desconfiado)",
-    "texto": "Una casa así no se ve con prisas. Elige el día y la hora que mejor te vengan y un asesor de Habitando Madrid te la enseña con calma, resuelve tus dudas y te da la ficha completa. Tú decides después, sin presión. Haz clic y agenda tu visita personalizada."
-   },
-   {
-    "hook": "H6 · Visitas personalizadas (versión A)",
-    "avatar": "A (familia)",
-    "texto": "Sabemos que con la familia es difícil encontrar un hueco. Por eso eliges tú el horario de la visita y recorréis la casa con calma: cuatro dormitorios, cuatro baños, dos salones y garaje privado. Venid a comprobar si es vuestra casa. Haz clic y agenda."
-   }
-  ],
-  "antes": "que el jardín es propio, que la visita es «sin compromiso» (H4 B y H6) y que «ubicación exclusiva» se puede afirmar así. Si algún dato cambia, hay que ajustarlo en el cuerpo correspondiente.",
-  "enfCuerpos": [
-   {
-    "nombre": "Estadístico",
-    "estructura": "Dato → Implicación → Solución → Promesa",
-    "A": "Dato: el [X]% de las familias que cambian de vivienda lo hacen por falta de espacio [fuente verificable]. Implicación: si tu piso ya se te queda pequeño, no eres una excepción [validar según el dato real]. Solución: un chalet en Las Rozas, urbanización Los Porches, con 4 dormitorios amplios, 4 baños completos, 2 salones, garaje privado y jardín [confirmar jardín]. Promesa + riesgo: lo ves en una visita personalizada antes de decidir nada.",
-    "B": "Dato: [X] de cada 10 compradores dicen haber visitado casas que no coincidían con el anuncio [fuente verificable]. Implicación: cada visita que no encaja es tiempo perdido. Solución: aquí las fotos son 100% reales y sin filtros, y te damos la ficha completa antes de ir [m², precio y gastos: confirmar]. Promesa + riesgo: solo visitas lo que de verdad encaja contigo."
-   },
-   {
-    "nombre": "Mito",
-    "estructura": "Mito → Realidad → Prueba → Riesgo bajo",
-    "A": "Mito: «para tener espacio, jardín y dos salones hay que irse muy lejos y pagar de más» [validar con precio y distancia reales]. Realidad: este chalet está en Las Rozas, urbanización Los Porches, y tiene 4 dormitorios amplios, 4 baños completos, 2 salones y garaje privado. Prueba + riesgo: agenda una visita personalizada y comprueba si encaja con tu familia, sin compromiso [confirmar condiciones].",
-    "B": "Mito: «las fotos de un anuncio nunca son como la casa». Realidad: en esta casa lo que ves es lo que es: fotos 100% reales y sin filtros. Prueba + riesgo: una visita personalizada, sin prisas; si no encaja, no pasa nada [confirmar condiciones]."
-   },
-   {
-    "nombre": "Especialidad",
-    "estructura": "Dolor → Cómo lo hacemos → Promesa",
-    "A": "Dolor: buscas una casa familiar y cada visita te deja más dudas que respuestas. Cómo lo hacemos: en Habitando Madrid enseñamos cada casa con una visita personalizada: recorres cada estancia con calma y recibes la ficha completa [confirmar experiencia en la zona]. Aquí: 4 dormitorios amplios, 4 baños completos, 2 salones, garaje privado y jardín en Los Porches, Las Rozas. Promesa: sabrás si es tu casa antes de decidir.",
-    "B": "Dolor: ya has perdido tardes en visitas que no encajaban. Cómo lo hacemos: antes de visitar te enviamos la ficha completa y fotos reales; la visita la hace un asesor de Habitando Madrid, de forma personalizada y en el horario que te vaya bien. Promesa: solo visitas lo que merece la pena."
-   },
-   {
-    "nombre": "Autoridad",
-    "estructura": "Fuente → Aplicado a ti → Promesa",
-    "A": "Fuente: [experto o informe verificable del sector inmobiliario] indica que [dato: el espacio es uno de los principales motivos para cambiar de vivienda]. Aplicado a ti: si tu familia ya necesita más espacio, esta casa lo resuelve: 4 dormitorios amplios, 2 salones y jardín en Los Porches, Las Rozas. Promesa: una visita personalizada para comprobarlo con tus propios ojos.",
-    "B": "Fuente: [profesional o fuente verificable del sector] recomienda [dato: pedir la ficha completa y ver el inmueble con calma antes de decidir]. Aplicado a ti: así lo hacemos aquí: ficha completa, fotos reales y visita personalizada. Promesa: decides con toda la información sobre la mesa."
-   },
-   {
-    "nombre": "Storytelling",
-    "estructura": "Personaje → Problema → Giro → Invitación",
-    "A": "Personaje: [familia compradora o caso real de Habitando Madrid, con permiso]. Problema: [la situación real que vivían en su vivienda anterior]. Giro: [cómo conocieron una casa como esta y qué cambió en su día a día: resultado real]. Invitación: si tu caso se parece, puedes ver esta casa de Las Rozas en una visita personalizada.",
-    "B": "Personaje: [comprador real, con permiso]. Problema: había visitado [X] casas que no se parecían a sus fotos. Giro: [cómo conoció esta casa y qué encontró: resultado real]. Invitación: si llevas tiempo buscando, esta casa se ve en una visita personalizada y sin compromiso [confirmar condiciones]."
-   },
-   {
-    "nombre": "Curiosidad",
-    "estructura": "Pregunta → Revelación → Invitación",
-    "A": "Pregunta: ¿qué tiene en común una casa donde nadie se pelea por el baño ni por el salón? Revelación: esta tiene 4 baños completos y 2 salones espaciosos, además de 4 dormitorios amplios, garaje privado y jardín [confirmar jardín], en Los Porches (Las Rozas). Invitación: te la enseñamos en una visita personalizada.",
-    "B": "Pregunta: ¿qué tiene de especial una casa cuyas fotos no necesitan filtros? Revelación: que lo que ves es lo que es. Invitación: te enviamos la ficha completa y, si te encaja, la visitamos juntos y sin compromiso [confirmar condiciones]."
-   }
-  ],
-  "plan": "lanzar los 6 hooks (o los 3–4 que permita el presupuesto) con el Cuerpo 1 de su avatar y el mismo visual. Prioridad sugerida: H1, H3, H4, H2. [Presupuesto diario: confirmar].",
-  "testeo": "Fase 1: 6 hooks (6 ángulos) con el Cuerpo 1 de su avatar y el mismo visual. Prioridad sugerida: H1, H3, H4, H2. Fase 2: escalar el ganador con 6 enfoques, cada uno con su cuerpo.",
-  "nombre": "Habitando Madrid · Venta chalet Las Rozas"
- }
+/* ===== 1) DATOS: edita solo esta sección. Eje → Grupo → Punto [título, texto] ===== */
+const MENSAJE = "Entramos en Google Ads solo con empleadores de EE.UU. en inglés, empezando por “hire latam talent” y “hire latin american talent”, y vendemos el fee mensual predecible frente al pago único de la competencia. Todo lo demás se valida antes de gastar.";
+const D = [
+ ["Oportunidad","#4cc9f0",[
+  ["Mercado",[
+   ["EE.UU. en inglés","Único mercado con datos sólidos: CEOs y gerentes de EE.UU. que buscan contratar talento LATAM."],
+   ["Fee mensual","Costo predecible y sin pago grande de entrada. HireLATAM cobra $3,500 por adelantado."]]],
+  ["Palabras de arranque",[
+   ["hire latam talent","500 búsquedas, competencia 21/100, puja 21–116 USD. HireLATAM es #1 orgánico: la subasta es la vía rápida."],
+   ["hire latin american talent","500 búsquedas, puja 31–175 USD. Orgánico abierto (hirelatam #66, valatam #56). Oberstaff no aparece."]]],
+  ["Huecos",[
+   ["Asistentes virtuales","Virtual Latinos #82 orgánico en “hire virtual assistant”, valatam #24. Ojo: hueco orgánico no es hueco en pago."]]]]],
+ ["Descartamos","#ff6b9d",[
+  ["Mercados",[
+   ["Español y España","9 de 10 palabras en español sin volumen. Solo SEO y validación con Keyword Planner por ubicación."],
+   ["Desarrolladores","Pujas de 80 a 811 USD y hirelatam ya es #1 y #2 orgánico. Sin margen conocido no se justifica."],
+   ["Candidatos por ahora","Clics baratos, pero sin clientes que contraten es una lista de candidatos sin trabajo."]]],
+  ["Palabras",[
+   ["Genéricas o de empleo","“remote jobs” (681K), “virtual assistant jobs” (171K) y “headhunters for remote jobs” atraen a quien busca trabajo."],
+   ["Marcas rivales","No pujar por sus nombres ni usarlos en el texto; revisar la política de marcas."]]],
+  ["Mensajes",[
+   ["Porcentajes de ahorro","No hay cifra verificada. Virtual Latinos ya perdió credibilidad con tres (78, 75 y 70 %)."],
+   ["Garantías y plazos","Fuera por decisión del cliente."]]]]],
+ ["Datos clave","#f7d154",[
+  ["Virtual Latinos",[
+   ["Volumen engañoso","66 anuncios; cerca del 84 % de su tráfico orgánico es empleo y entrevistas (clasificación propia)."],
+   ["Anuncios débiles","El ahorro cambia entre 78, 75 y 70 %, repite su marca en titulares y un video usa una escena genérica."],
+   ["Precio","Desde $1.6K al mes, sin fees de reclutamiento: referente directo de precio."]]],
+  ["HireLATAM",[
+   ["Modelo a imitar","24 + 2 anuncios, un anuncio y una URL por rol; 44 % de su tráfico sale de seis búsquedas de contratar en LATAM."],
+   ["Puntos débiles","“Top 1 %” sin respaldo, error de codificación (“&”) en un anuncio y un video sin precio hasta el final."]]],
+  ["Costos y huecos",[
+   ["Pujas","Empleadores 21–175 USD; candidatos 0,89–2,97 USD (puja de primera posición, no costo real)."],
+   ["Marca propia","“oberstaff” tiene 720 búsquedas y hoy aparece con tres URL distintas."],
+   ["Sin español","Ningún competidor tiene anuncios en español ni para candidatos."]]]]],
+ ["Cómo atacamos","#c18bff",[
+  ["Campañas",[
+   ["G1 y marca primero","Talento LATAM (frase y exacta) y “oberstaff” (exacta). Una ubicación en modo Presencia, tope de puja y presupuesto diario fijo."],
+   ["G2 y G3 en prueba","Asistentes y “fiverr alternative” con presupuesto mínimo, tras medir la puja real. G3 solo con página comparativa."],
+   ["Candidatos después","Campaña aparte y con menor presupuesto, cuando haya clientes que contraten."]]],
+  ["Mensaje",[
+   ["Costo vs. zona horaria","Dos titulares por grupo: “Predictable Monthly Cost” y “Same US Time Zone Teams”."],
+   ["Dedicado vs. marketplace","Un profesional verificado, a tiempo completo y en tu horario."]]],
+  ["Orgánico y video",[
+   ["Páginas por rol","Precios, LATAM frente a Filipinas, alternativas a Fiverr y zonas horarias."],
+   ["Video de 30 s","Gancho de dolor, demostración y oferta: “One monthly fee. No big upfront cost.” Subtítulos con resalte amarillo."]]]]],
+ ["Riesgos que evitamos","#ff9f6b",[
+  ["Gasto",[
+   ["Mercado sin medición","Español y España esperan a Keyword Planner con la ubicación correcta."],
+   ["Buscadores de empleo","Negativas: jobs, careers, salary, resume, template, job description, free, course, currency. Revisión semanal de términos."],
+   ["Pujar a ciegas","Pujas altas y sin ingreso por cliente conocido."]]],
+  ["Mensaje",[
+   ["Prometer de más","“No Upfront Fee” y las cifras [$X] solo se publican si son reales."],
+   ["Mezclar audiencias","Cada campaña con su propio país, idioma y página de destino."],
+   ["Copiar el ruido","El tráfico de empleo de la competencia no es nuestra vara de comparación."]]]]],
+ ["Decisiones y faltantes","#6bf5b0",[
+  ["Decisiones del jefe",[
+   ["Alcance inicial","Empleadores EE.UU. en inglés más marca."],
+   ["Presupuesto y tope","Definir presupuesto diario y tope de puja para G1."],
+   ["Fee y cobro inicial","Confirmar el fee mensual real y si hay algún cobro inicial."],
+   ["Posponer","Español, España, candidatos y desarrolladores hasta validar."]]],
+  ["Datos que faltan",[
+   ["Retención y margen","Con $1,600 al mes, el cliente debe quedarse unos 7 meses para llegar a ~11.500 USD de ingreso (supuestos: 3 % de conversión, 20 % de cierre). Es ingreso, no margen."],
+   ["Pujas de competidores","Las capturas muestran textos, no palabras. Verificar con Semrush y el Centro de transparencia de anuncios de Google."],
+   ["Volúmenes y reseñas","Roles de G4 y asistentes (50 en Google frente a 680 en Semrush), Keyword Planner por país y reseñas verificables."]]],
+  ["Próximos pasos",[
+   ["Pasos 1 a 3","Cerrar fee, retención y margen; configurar conversiones; preparar páginas de destino."],
+   ["Pasos 4 a 6","Lanzar G1 y marca; revisar términos cada semana; verificar anuncios rivales."],
+   ["Paso 7","Tras dos semanas con leads reales, reemplazar supuestos y decidir G2, G3, candidatos y español."]]]]],
+ ["Palabras · Empleadores EE.UU.","#e879f9",[
+  ["Pujar",[
+   ["hire latam talent","Transaccional · frase y exacta · 500 búsquedas · puja 21,49–116,36 USD · KD 39. Sí, primero."],
+   ["hire latin american talent","Transaccional · frase y exacta · 500 · 30,73–174,80 USD · KD 65. Sí, a la par."],
+   ["virtual staffing","Comercial · frase, con negativas · 500 · 5,00–36,54 USD. Sí, con negativas: la intención es ambigua."],
+   ["oberstaff","Navegacional · exacta · 720 búsquedas (Semrush). Sí: protege la marca."]]],
+  ["Con cuidado o en prueba",[
+   ["hire latam","Transaccional · exacta · 500 · 1,65–112 USD. Con cuidado: mezcla búsquedas de la marca hirelatam."],
+   ["remote staffing agency latam","Comercial · frase · 90 en Semrush · KD 36 · sin dato en Google. Prueba pequeña."],
+   ["fiverr alternative","Comercial · frase y exacta · 500 · 1,96–17,47 USD · Semrush 1,9K. Prueba mínima, solo con página comparativa."],
+   ["outsourced executive assistant","Comercial · frase · 50 en Google frente a 680 en Semrush · 8,75–126,19 USD. Validar."],
+   ["hire remote executive assistant","Transaccional · frase · misma discrepancia de volumen que la anterior. Validar."],
+   ["hire latam bookkeeper","G4, exacta. Rol nuevo que no está en el informe: medir volumen y puja."],
+   ["latam customer support","G4, exacta. Rol nuevo: medir volumen y puja."],
+   ["hire bilingual customer service","G4, exacta. Rol nuevo: medir volumen y puja."]]],
+  ["Después o no por ahora",[
+   ["latin america virtual assistant","Transaccional · exacta · 50 · 31,37–173,24 USD. No por ahora: volumen bajo para el costo."],
+   ["virtual assistant latin america","Transaccional · exacta · 50 · 31,37–173,24 USD. No por ahora."],
+   ["hire latam developers","Exacta · 50 · puja 80–811 USD. No: hirelatam es #1 orgánico."],
+   ["hire latin american developers","Exacta · 500 · puja 80–811 USD. No: hirelatam es #2 orgánico."],
+   ["hire developers in latam","Exacta · 50 · puja 80–811 USD. No por ahora."],
+   ["virtual latinos (marca)","Navegacional · exacta · 13K búsquedas (informe, EE.UU.). Después; no usar su nombre en el texto."],
+   ["hirelatam (marca)","Navegacional · exacta · 480 búsquedas. Después; revisar la política de marcas."]]]]],
+ ["Palabras · España y español","#a3e635",[
+  ["Mercado 2 · hispanos en EE.UU.",[
+   ["contratar talento latinoamericano","Transaccional · exacta · sin volumen ni puja. No hasta validar con Keyword Planner EE.UU. en español."],
+   ["contratar talento latam","Transaccional · exacta · sin volumen ni puja. No hasta validar."],
+   ["contratar asistentes virtuales en latinoamérica","Transaccional · exacta · sin volumen ni puja. No hasta validar."],
+   ["asistente virtual latinoamérica","Transaccional · exacta · sin volumen ni puja. No hasta validar."]]],
+  ["Mercados 3 y 4 · España",[
+   ["contratar latam","Transaccional · frase y exacta · sin volumen. No hasta correr Keyword Planner con ubicación España."],
+   ["contratación en latinoamérica","Transaccional · frase y exacta · sin volumen. No hasta validar."],
+   ["contratar desarrolladores latam","Transaccional · exacta · sin volumen. No: en EE.UU. los desarrolladores tienen la puja más alta."],
+   ["contratar desarrolladores latinoamericanos","Transaccional · exacta · sin volumen. No."],
+   ["contratar desarrolladores en latam","Transaccional · exacta · sin volumen. No."],
+   ["asistente virtual en latinoamérica","Transaccional · exacta · 50 búsquedas · competencia 90/100 · sin puja. Prueba mínima, tras validar: serían 2 o 3 clics al mes."]]],
+  ["España · informativas (no pujar)",[
+   ["outsourcing de personal","Informativa · 70–90 búsquedas · KD 22. No pujar: sirve para contenido y remarketing."],
+   ["contratación de personal","Informativa · 140 búsquedas · CPC 10,06 EUR · KD 31. No: el CPC alto engaña, la intención es informativa."],
+   ["best tools for remote recruitment","Comparativa · 210 búsquedas en España · KD 8. No pujar: encaja como artículo."],
+   ["best sales outsourcing companies","Comparativa · 40 búsquedas · KD 22. No pujar: encaja como artículo."]]]]],
+ ["Palabras · Candidatos","#fbbf24",[
+  ["Pujar (inglés)",[
+   ["bilingual remote job","Frase y exacta · 5.000 búsquedas · 0,12–1,31 USD · KD 22. Sí, tras validar país: la más barata con volumen alto."],
+   ["bilingual jobs from home","Frase y exacta · 500 · 0,14–0,89 USD. Sí: la puja más baja del grupo."],
+   ["remote executive assistant jobs","Frase y exacta · 5.000 · 0,21–2,97 USD · Semrush 11,2K. Sí, solo geografía LATAM."],
+   ["virtual executive assistant jobs","Frase y exacta · 500 · 0,37–2,93 USD. Sí: perfil que Oberstaff coloca."],
+   ["remote manager jobs","Frase · 500 · 0,15–2,35 USD · KD 20. Sí: perfil gerencial."],
+   ["remote jobs in mexico","Frase · 500 · 0,08–1,13 USD. Sí, solo en la campaña de México."],
+   ["remote jobs in mexico for english speakers","Frase · 500 · 0,08–1,13 USD. Sí, solo en la campaña de México."],
+   ["headhunters for remote jobs","Frase · 5.000 · 0,29–2,95 USD. Prueba como candidatos, no como empleadores."]]],
+  ["Validar antes de gastar",[
+   ["trabajos remotos en Estados Unidos","Frase · 8,5K en Semrush EE.UU. · KD 31. Validar: puede ser de hispanos residentes allí."],
+   ["trabajo remoto para empresas de Estados Unidos","Frase · sin dato. Semilla propuesta."],
+   ["trabajo remoto bilingüe","Frase · sin dato. Semilla propuesta."],
+   ["asistente virtual trabajo","Frase y exacta · 350 · KD 25 (Semrush EE.UU.). Validar."],
+   ["latam jobs","Exacta · 480 en EE.UU. · 50 en España. Hirelatam está en el puesto 6. Validar."],
+   ["latam careers","Exacta · 480 en EE.UU. · 50 en España. Validar."]]]]],
+ ["Palabras · No pujar y negativas","#94a3b8",[
+  ["No pujar en ningún mercado",[
+   ["remote jobs","681K búsquedas: demasiado genérica."],
+   ["virtual assistant jobs","171K: dominada por buscadores de empleo en EE.UU."],
+   ["international jobs for Americans","Público equivocado."],
+   ["how to manage remote teams","Informativa: va a contenido SEO."],
+   ["what does a virtual assistant do","Informativa: va a contenido SEO."],
+   ["south america time zones","Informativa: va a contenido SEO."],
+   ["near me","Variantes con “near me”: el trabajo es remoto."]]],
+  ["Negativas obligatorias",[
+   ["Campañas de empleadores","jobs, careers, empleo, vacantes, salary, resume, template, job description, free, course, currency."],
+   ["Campañas de candidatos","hire, agency, contratar, precio."]]]]],
+ ["Palabras · Virtual Latinos y HireLATAM","#2dd4bf",[
+  ["Virtual Latinos (orgánico)",[
+   ["legal secretary","290 visitas: descripción de puesto, no cliente."],
+   ["administrative support skills","160 visitas: empleo."],
+   ["executive assistant job role","110 visitas: empleo."],
+   ["bilingual virtual assistants","#1 · 43 visitas. Apoyo comercial."],
+   ["virtual assistants latin america","#1 · 33 visitas. Apoyo comercial."],
+   ["latam time zones","#1 · 52 visitas. Formato de zonas horarias a copiar."],
+   ["virtual assistant for realtors","#8 · 63 visitas."],
+   ["hire virtual assistant","Puesto #82: hueco orgánico (no necesariamente en pago)."],
+   ["hire va","Puesto #17: hueco orgánico."],
+   ["virtual executive assistant","Puesto #68: hueco orgánico."]]],
+  ["HireLATAM (orgánico)",[
+   ["hire latam developers","#1 · 25 visitas."],
+   ["hire in latin america","#1 · 12 visitas."],
+   ["hire latam talent (orgánico)","#1 · 12 visitas."],
+   ["latam hire","#1 · 9 visitas."],
+   ["hire latin american developers (orgánico)","#2 · 11 visitas."],
+   ["latam hiring","#2 · 6 visitas."],
+   ["currency latin america","Unas 20 visitas: ruido de monedas, no clientes."],
+   ["LATAM frente a Filipinas","1,3K y 1,6K búsquedas con KD 12 y 3: formato comparativo a copiar."]]]]],
+ ["Palabras · Otros competidores","#38bdf8",[
+  ["valatam",[
+   ["latin american virtual assistant","#2 orgánico."],
+   ["latin virtual assistant","#2 orgánico."],
+   ["latin america virtual assistant","#2 orgánico."],
+   ["hire a virtual assistant","Puesto #24: hueco orgánico."]]],
+  ["freelancelatam",[
+   ["define detail oriented","81 de 223 visitas de su muestra: nada que ver con contratar."],
+   ["harvard resume format","57 visitas: plantillas de CV."],
+   ["hire latin american talent (freelancelatam)","Puesto #12 con 1 visita."]]],
+  ["globaltize (España)",[
+   ["best tools for remote recruitment (globaltize)","#1 · 27 visitas · KD 8: casi tres cuartas partes de su tráfico."],
+   ["global positions","8 visitas."],
+   ["best software for global contractor tax forms","Puesto #8."]]]]]
 ];
 
-const COLORS = ["#4cc9f0", "#ff9f6b", "#f7d154", "#c18bff"];   // un color por campaña
-const ENFOQUE_COLOR = "#9b8cff";
-const AMBER = "#f5c26b";
+/* ===== 2) ÁRBOL: n = -1 centro · 0 eje · 1 grupo · 2 punto ===== */
+const ROOT="root", meta={}, tops=[];
+meta[ROOT]={n:-1,hijos:tops,t:"Estrategia Google Ads Oberstaff",c:"#4cc9f0",open:true};
+D.forEach(([t,c,gs],i)=>{const a="a"+i;tops.push(a);meta[a]={n:0,p:ROOT,hijos:[],t,c,open:false};
+ gs.forEach(([g,ls],j)=>{const b=a+"g"+j;meta[a].hijos.push(b);meta[b]={n:1,p:a,hijos:[],t:g,c,open:false};
+  ls.forEach(([lt,tx],k)=>{const l=b+"l"+k;meta[b].hijos.push(l);meta[l]={n:2,p:b,hijos:[],t:lt,tx,c};});});});
+const cuenta=id=>meta[id].n===2?1:meta[id].hijos.reduce((s,h)=>s+cuenta(h),0);
+const flecha=id=>meta[id].open?"▾ ":"▸ ";
+function label(id){const m=meta[id];
+ if(m.n===-1)return "Estrategia\nGoogle Ads\nOberstaff\n"+cuenta(id)+" puntos";
+ if(m.n===0)return flecha(id)+m.t+"\n"+cuenta(id)+" puntos";
+ if(m.n===1)return flecha(id)+m.t+" ("+m.hijos.length+")";
+ return m.t;}
+const F="Inter, Segoe UI, Arial";
+function def(id){const m=meta[id],hl=(b)=>({background:b,border:"#ffffff"});
+ if(m.n===-1)return{id,label:label(id),shape:"circle",margin:22,color:{background:m.c,border:"#fff",highlight:hl("#7fdcf6"),hover:hl("#7fdcf6")},font:{color:"#0f1419",size:19,face:F},borderWidth:3,shadow:{enabled:true,color:"rgba(76,201,240,.45)",size:30,x:0,y:0}};
+ if(m.n===0)return{id,label:label(id),shape:"box",margin:14,widthConstraint:{maximum:190},color:{background:m.c,border:m.c,highlight:hl(m.c),hover:hl(m.c)},font:{color:"#0f1419",size:16,face:F},shapeProperties:{borderRadius:14},borderWidth:2};
+ if(m.n===1)return{id,label:label(id),shape:"box",margin:10,widthConstraint:{maximum:160},color:{background:"#232b38",border:m.c,highlight:hl("#2c3646"),hover:hl("#2c3646")},font:{color:"#e6edf3",size:14,face:F},shapeProperties:{borderRadius:10},borderWidth:2};
+ return{id,label:label(id),shape:"box",margin:8,widthConstraint:{maximum:190},color:{background:"#161c24",border:m.c,highlight:hl("#222b38"),hover:hl("#222b38")},font:{color:"#c9d4e0",size:12,face:F},shapeProperties:{borderRadius:8},borderWidth:1.2};}
+function arista(h){const m=meta[h];return{id:"e_"+h,from:m.p,to:h,color:{color:m.n<=1?m.c:"#4a586a",opacity:.8},width:m.n===0?3:m.n===1?2:1.2,smooth:{type:"cubicBezier",forceDirection:"horizontal",roundness:.55}};}
 
-/* =====================================================================
-   2) ÁRBOL INTERNO
-   meta[id] = { clase, padre, hijos[], datos, color, campana, expandido }
-   clase: tipo (campaña) · hook · cuerpo · enfoque · enfcuerpo
-   ===================================================================== */
-const meta = {};
-const topIds = [];
+/* ===== 3) RED (Vis.js) sin física: el diseño lo calcula la sección 4 ===== */
+const nodes=new vis.DataSet(), edges=new vis.DataSet();
+nodes.add(Object.assign(def(ROOT),{x:0,y:0}));
+tops.forEach(t=>{nodes.add(Object.assign(def(t),{x:0,y:0}));edges.add(arista(t));});
+const network=new vis.Network(document.getElementById("network"),{nodes,edges},{physics:{enabled:false},interaction:{hover:true,tooltipDelay:100000}});
+const refresca=id=>nodes.update({id,label:label(id)});
+function mostrar(id){const p=network.getPositions([id])[id]||{x:0,y:0};meta[id].hijos.forEach(h=>{nodes.add(Object.assign(def(h),{x:p.x,y:p.y}));edges.add(arista(h));});}
+function ocultar(id){meta[id].hijos.forEach(h=>{ocultar(h);meta[h].open=false;if(nodes.get(h)){nodes.remove(h);edges.remove("e_"+h);}});}
+function alternar(id){const m=meta[id];m.open=!m.open;m.open?mostrar(id):ocultar(id);refresca(id);}
+function abrir(id){const m=meta[id];if(m.n<2&&m.hijos.length){if(!m.open){m.open=true;mostrar(id);refresca(id);}m.hijos.forEach(abrir);}}
+function abrirHasta(id){const p=meta[id].p;if(p&&p!==ROOT){abrirHasta(p);if(!meta[p].open){meta[p].open=true;mostrar(p);refresca(p);}}}
 
-function addMeta(id, m) {
-  m.hijos = []; m.expandido = false;
-  meta[id] = m;
-  if (m.padre) meta[m.padre].hijos.push(id);
-}
-const hookNum = s => { const r = /^\**H(\d)/.exec(s); return r ? "H" + r[1] : null; };
+/* ===== 4) DISEÑO EQUILIBRADO: ejes a izquierda y derecha, ramas en columnas ===== */
+const COL={1:330,2:600,3:870}, RAN={0:84,1:60,2:60}, GAP=30;
+const alto=id=>{const m=meta[id];return m.open&&m.hijos.length?Math.max(RAN[m.n],m.hijos.reduce((s,h)=>s+alto(h),0)):RAN[m.n];};
+function colocar(id,lado,y0,pos){const m=meta[id],x=lado*COL[m.n+1];
+ if(m.open&&m.hijos.length){let y=y0;m.hijos.forEach(h=>{colocar(h,lado,y,pos);y+=alto(h);});pos[id]={x,y:(pos[m.hijos[0]].y+pos[m.hijos[m.hijos.length-1]].y)/2};}
+ else pos[id]={x,y:y0+alto(id)/2};}
+function calcular(){const pos={[ROOT]:{x:0,y:0}};
+ [1,-1].forEach((lado,k)=>{const r=tops.filter((t,i)=>i%2===k);let y=-(r.reduce((s,t)=>s+alto(t),0)+GAP*Math.max(0,r.length-1))/2;
+  r.forEach(t=>{colocar(t,lado,y,pos);y+=alto(t)+GAP;});});return pos;}
+let anim=0;const quieto=matchMedia("(prefers-reduced-motion:reduce)").matches;
+function layout(ajustar=true){const obj=calcular(),ids=Object.keys(obj).filter(i=>nodes.get(i)),ini=network.getPositions(ids),t0=performance.now(),dur=quieto?0:450,mio=++anim;
+ (function paso(t){if(mio!==anim)return;const k=dur?Math.min(1,(t-t0)/dur):1,e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
+  ids.forEach(i=>{const a=ini[i]||obj[i],b=obj[i];network.moveNode(i,a.x+(b.x-a.x)*e,a.y+(b.y-a.y)*e);});
+  if(k<1)requestAnimationFrame(paso);else if(ajustar)network.fit({animation:quieto?false:{duration:450,easingFunction:"easeInOutQuad"}});})(performance.now());}
 
-DOC.forEach((c, ci) => {
-  const cid = "c" + ci, color = COLORS[ci % COLORS.length];
-  topIds.push(cid);
-  addMeta(cid, { clase: "tipo", padre: null, datos: c, color, campana: c.nombre });
+/* ===== 5) PANEL LATERAL: resumen ejecutivo y detalle de cada nodo ===== */
+const panel=document.getElementById("panel"), pop=document.getElementById("pop");
+function resumen(){panel.innerHTML='<h2>Resumen ejecutivo</h2><p class="msg">'+MENSAJE+'</p>'+D.map(([t,c,gs])=>
+ '<details class="eje" style="border-left-color:'+c+'"><summary>'+t+'</summary><div class="in">'+gs.map(([g,ls])=>'<h4>'+g+'</h4>'+ls.map(([a,b])=>'<p><b>'+a+'.</b> '+b+'</p>').join("")).join("")+'</div></details>').join("")+
+ '<p class="hint">Haz clic en un eje o grupo del mapa para abrir su rama; pasa el cursor sobre un punto para leerlo.</p>';}
+function ruta(id){const r=[];for(let m=meta[id];m&&m.n>=0;m=meta[m.p])r.unshift(m.t);return r.join(" › ");}
+function detalle(id){const m=meta[id];
+ panel.innerHTML='<button class="back" id="vuelve">← Resumen ejecutivo</button><div class="crumb">'+ruta(id)+'</div><h2>'+m.t+'</h2>'+
+ (m.n===2?'<div class="block">'+m.tx+'</div>':'<div>'+m.hijos.map(h=>'<button class="chip" data-id="'+h+'">'+meta[h].t+'</button>').join("")+'</div>');
+ document.getElementById("vuelve").onclick=resumen;
+ panel.querySelectorAll(".chip").forEach(b=>b.onclick=()=>ir(b.dataset.id));}
+function ir(id){const m=meta[id];abrirHasta(id);if(m.n<2&&!m.open)alternar(id);detalle(id);layout(false);setTimeout(()=>network.focus(id,{scale:.9,animation:quieto?false:true}),480);}
 
-  c.hooks.forEach(h => {
-    const hid = cid + "_" + h.id;
-    addMeta(hid, { clase: "hook", padre: cid, datos: h, color, campana: c.nombre });
+network.on("click",p=>{const id=p.nodes[0];if(!id)return;const m=meta[id];
+ if(m.n===-1){resumen();return;}if(m.n<2){alternar(id);layout();}detalle(id);});
+network.on("hoverNode",p=>{const m=meta[p.node];if(m.n!==2)return;const s=network.canvasToDOM(network.getPositions([p.node])[p.node]),w=document.getElementById("stage").clientWidth;
+ pop.innerHTML="<b>"+m.t+"</b><span>"+m.tx+"</span>";pop.style.left=Math.max(10,Math.min(w-300,s.x+10))+"px";pop.style.top=(s.y+28)+"px";pop.classList.add("show");});
+["blurNode","dragStart","zoom"].forEach(e=>network.on(e,()=>pop.classList.remove("show")));
 
-    /* Cuerpos finales que continúan este hook (uno por avatar) */
-    c.finales.forEach((f, k) => {
-      if (hookNum(f.hook) !== h.id) return;
-      const esq = c.esqHook ? c.esqHook[k] : null;
-      addMeta(hid + "_b" + k, { clase: "cuerpo", padre: hid, color, campana: c.nombre,
-        datos: { avatar: f.avatar, etiqueta: f.hook, texto: f.texto, esquema: esq ? esq.texto : "" } });
-    });
+/* ===== 6) CONTROLES ===== */
+const $=id=>document.getElementById(id), cnt=$("count");
+$("bExp").onclick=()=>{tops.forEach(abrir);layout();};
+$("bCol").onclick=()=>{tops.forEach(t=>{ocultar(t);meta[t].open=false;refresca(t);});layout();};
+$("bLay").onclick=()=>layout();
+$("bFit").onclick=()=>network.fit({animation:quieto?false:true});
+$("bRes").onclick=resumen;
+$("q").oninput=e=>{const q=e.target.value.trim().toLowerCase();const hojas=Object.keys(meta).filter(i=>meta[i].n===2);
+ if(!q){hojas.forEach(i=>nodes.get(i)&&nodes.update({id:i,opacity:1}));cnt.textContent="";return;}
+ tops.forEach(abrir);const ok=hojas.filter(i=>(meta[i].t+" "+meta[i].tx).toLowerCase().includes(q));
+ hojas.forEach(i=>nodes.update({id:i,opacity:ok.includes(i)?1:.18}));cnt.textContent=ok.length+" de "+hojas.length+" puntos";layout();};
 
-    /* Enfoques: solo el hook ganador de ejemplo que trae el documento */
-    if (h.id === c.ejemploHook) {
-      c.enfoques.forEach((e, j) => {
-        const eid = hid + "_f" + j;
-        addMeta(eid, { clase: "enfoque", padre: hid, color, campana: c.nombre, datos: e });
-        if (c.enfCuerpos) {                                // Habitando: cada enfoque trae su cuerpo (A y B)
-          const ec = c.enfCuerpos[j];
-          [["A", "Avatar A (familia)"], ["B", "Avatar B (comprador desconfiado)"]].forEach(([k, lab]) => {
-            addMeta(eid + "_" + k, { clase: "enfcuerpo", padre: eid, color, campana: c.nombre,
-              datos: { enfoque: e.nombre, avatar: lab, estructura: ec.estructura, texto: ec[k] } });
-          });
-        }
-      });
-    }
-  });
-});
-
-const tienePH = t => /\[[^\]]+\]/.test(t || "");
-const textoDe = id => { const d = meta[id].datos; return (d.texto || d.hook || "") + (d.texto && d.hook ? d.hook : ""); };
-
-function contar(id, clase) {
-  const m = meta[id];
-  return (m.clase === clase ? 1 : 0) + m.hijos.reduce((s, c) => s + contar(c, clase), 0);
-}
-const nCuerpos = id => contar(id, "cuerpo") + contar(id, "enfcuerpo");
-
-/* =====================================================================
-   3) APARIENCIA DE LOS NODOS
-   ===================================================================== */
-const flecha = m => (m.hijos.length ? (m.expandido ? "▾ " : "▸ ") : "");
-
-function etiqueta(id) {
-  const m = meta[id], d = m.datos;
-  if (m.clase === "tipo")  return flecha(m) + d.nombre + "\n" + contar(id, "hook") + " hooks · " + nCuerpos(id) + " cuerpos";
-  if (m.clase === "hook")  return flecha(m) + d.id + " · " + d.angulo;
-  if (m.clase === "cuerpo") return "Cuerpo · " + d.avatar + (tienePH(d.texto) ? " ⚠" : "");
-  if (m.clase === "enfoque") return flecha(m) + "Enfoque · " + d.nombre + (tienePH(d.hook) ? " ⚠" : "");
-  return "Cuerpo · " + d.avatar.split(" (")[0] + (tienePH(d.texto) ? " ⚠" : "");
-}
-
-function definirNodo(id) {
-  const m = meta[id], base = { id, label: etiqueta(id), shape: "box", font: { face: "Inter, Segoe UI, Arial" } };
-  if (m.clase === "tipo") return { ...base, margin: 14, widthConstraint: { maximum: 200 }, mass: 4, borderWidth: 2,
-    color: { background: m.color, border: m.color, highlight: { background: m.color, border: "#fff" }, hover: { background: m.color, border: "#fff" } },
-    font: { ...base.font, color: "#0f1419", size: 17 }, shapeProperties: { borderRadius: 14 } };
-  if (m.clase === "hook") return { ...base, margin: 10, widthConstraint: { maximum: 170 }, mass: 2, borderWidth: 2,
-    color: { background: "#161c24", border: m.color, highlight: { background: "#222b38", border: "#fff" }, hover: { background: "#222b38", border: "#fff" } },
-    font: { ...base.font, color: "#e6edf3", size: 13 }, shapeProperties: { borderRadius: 9 } };
-  if (m.clase === "enfoque") return { ...base, margin: 8, widthConstraint: { maximum: 170 }, mass: 1.5, borderWidth: 2,
-    color: { background: "#232b38", border: ENFOQUE_COLOR, highlight: { background: "#2c3646", border: "#fff" }, hover: { background: "#2c3646", border: "#fff" } },
-    font: { ...base.font, color: "#e6edf3", size: 12 }, shapeProperties: { borderRadius: 9 } };
-  /* cuerpo / enfcuerpo: borde discontinuo ámbar */
-  return { ...base, margin: 8, widthConstraint: { maximum: 170 }, mass: 1, borderWidth: 1.5,
-    color: { background: "#2a2418", border: AMBER, highlight: { background: "#3a3120", border: "#fff" }, hover: { background: "#3a3120", border: "#fff" } },
-    font: { ...base.font, color: "#f5d9a0", size: 12 }, shapeProperties: { borderRadius: 8, borderDashes: [5, 4] } };
-}
-
-function definirArista(hijo) {
-  const m = meta[hijo], c = m.clase;
-  return { id: "e_" + hijo, from: m.padre, to: hijo, smooth: { type: "continuous" },
-    color: { color: c === "hook" ? m.color : c === "enfoque" ? ENFOQUE_COLOR : (c === "cuerpo" || c === "enfcuerpo") ? AMBER : "#3a4757", opacity: 0.75 },
-    width: c === "hook" ? 2 : 1.2, dashes: (c === "cuerpo" || c === "enfcuerpo") };
-}
-
-/* =====================================================================
-   4) RED (Vis.js) Y FÍSICA TIPO TELARAÑA
-   ===================================================================== */
-const nodes = new vis.DataSet();
-const edges = new vis.DataSet();
-topIds.forEach(id => nodes.add(definirNodo(id)));
-
-const container = document.getElementById("network");
-const network = new vis.Network(container, { nodes, edges }, {
-  physics: {
-    enabled: true, solver: "forceAtlas2Based",
-    forceAtlas2Based: { gravitationalConstant: -130, centralGravity: 0.01, springLength: 150, springConstant: 0.07, damping: 0.5, avoidOverlap: 1 },
-    stabilization: { iterations: 250, fit: true }, minVelocity: 0.4
-  },
-  interaction: { hover: true, dragNodes: true, zoomView: true, multiselect: false }
-});
-
-/* =====================================================================
-   5) EXPANDIR / COLAPSAR (los hijos se añaden o se quitan del grafo)
-   ===================================================================== */
-const actualizarEtiqueta = id => nodes.update({ id, label: etiqueta(id) });
-
-function expandir(id) {
-  const m = meta[id];
-  if (m.expandido || !m.hijos.length) return;
-  const pos = network.getPositions([id])[id] || { x: 0, y: 0 };
-  m.hijos.forEach((h, i) => {
-    const ang = (i / m.hijos.length) * Math.PI * 2, def = definirNodo(h);
-    def.x = pos.x + Math.cos(ang) * 100; def.y = pos.y + Math.sin(ang) * 100;
-    nodes.add(def); edges.add(definirArista(h));
-  });
-  m.expandido = true; actualizarEtiqueta(id); network.startSimulation();
-}
-function colapsar(id) {
-  const m = meta[id];
-  if (!m.expandido) return;
-  m.hijos.forEach(h => { colapsar(h); if (nodes.get(h)) nodes.remove(h); if (edges.get("e_" + h)) edges.remove("e_" + h); });
-  m.expandido = false; actualizarEtiqueta(id);
-}
-const alternar = id => (meta[id].expandido ? colapsar(id) : expandir(id));
-function expandirTodo(id) { expandir(id); meta[id].hijos.forEach(expandirTodo); }
-function abrirAncestros(id) {
-  const cadena = []; let p = meta[id].padre;
-  while (p) { cadena.unshift(p); p = meta[p].padre; }
-  cadena.forEach(expandir);
-}
-
-/* =====================================================================
-   6) PANEL LATERAL (aquí se lee y se COPIA el guion completo)
-   ===================================================================== */
-const panel = document.getElementById("panel");
-
-function el(tag, cls, texto) { const e = document.createElement(tag); if (cls) e.className = cls; if (texto !== undefined) e.textContent = texto; return e; }
-
-/* Texto con los [corchetes] resaltados */
-function resaltar(texto) {
-  const frag = document.createDocumentFragment();
-  texto.split(/(\[[^\]]*\])/).forEach(parte => {
-    if (!parte) return;
-    if (/^\[[^\]]*\]$/.test(parte)) { const mk = el("mark", "ph", parte); frag.appendChild(mk); }
-    else frag.appendChild(document.createTextNode(parte));
-  });
-  return frag;
-}
-
-/* Copiar al portapapeles (con respaldo para abrir el archivo en local) */
-function toast(msg) {
-  const t = document.getElementById("toast"); t.textContent = msg; t.classList.add("show");
-  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 1600);
-}
-function copiar(texto) {
-  const ok = () => toast("Copiado ✓");
-  const respaldo = () => {
-    const ta = document.createElement("textarea"); ta.value = texto; ta.style.cssText = "position:fixed;opacity:0";
-    document.body.appendChild(ta); ta.select();
-    try { document.execCommand("copy"); ok(); } catch (e) { toast("No se pudo copiar"); }
-    document.body.removeChild(ta);
-  };
-  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(texto).then(ok).catch(respaldo); else respaldo();
-}
-const limpiarHook = t => (t || "").trim().replace(/^«\s*/, "").replace(/\s*»$/, "");
-
-function botonCopiar(texto, etiquetaBtn) { const b = el("button", "copy", etiquetaBtn || "Copiar"); b.onclick = () => copiar(texto); return b; }
-
-function bloque(clave, valor, textoCopiar) {
-  const b = el("div", "block"), k = el("div", "k"), v = el("div", "v");
-  k.appendChild(el("span", null, clave));
-  if (textoCopiar !== undefined) k.appendChild(botonCopiar(textoCopiar));
-  v.appendChild(resaltar(valor)); b.appendChild(k); b.appendChild(v); return b;
-}
-function seccion(titulo, hijo, abierta) {
-  const d = el("details"); if (abierta) d.open = true;
-  d.appendChild(el("summary", null, titulo));
-  const inner = el("div", "inner"); inner.appendChild(hijo); d.appendChild(inner); return d;
-}
-function chip(texto, color, onclick) {
-  const c = el("span", "chip", texto); c.style.borderLeftColor = color; c.onclick = onclick; return c;
-}
-function irA(id) { abrirAncestros(id); setTimeout(() => seleccionar(id), 80); }
-function seleccionar(id) {
-  if (!nodes.get(id)) return;
-  network.selectNodes([id]);
-  network.focus(id, { scale: 1.0, animation: { duration: 500, easingFunction: "easeInOutQuad" } });
-  mostrarDetalle(id);
-}
-function botonGrande(texto, aCopiar, clase) { const b = el("button", clase || "primary", texto); b.onclick = () => copiar(aCopiar); return b; }
-const avisoPH = t => tienePH(t) ? (() => { const w = el("div", "warn"); w.appendChild(document.createTextNode("⚠ Este texto tiene ")); w.appendChild(el("mark", "ph", "[datos por confirmar]")); w.appendChild(document.createTextNode(" resaltados. Reemplázalos con datos reales del cliente antes de grabar.")); return w; })() : document.createDocumentFragment();
-
-function mostrarDetalle(id) {
-  const m = meta[id], d = m.datos;
-  panel.innerHTML = "";
-  const etiquetas = { tipo: "Campaña", hook: "Hook (ángulo)", cuerpo: "Cuerpo · guion listo para grabar", enfoque: "Enfoque del hook ganador", enfcuerpo: "Cuerpo del enfoque" };
-  panel.appendChild(el("h2", null, etiquetas[m.clase]));
-
-  /* ---------- CAMPAÑA ---------- */
-  if (m.clase === "tipo") {
-    panel.appendChild(el("p", "title", d.nombre));
-    panel.appendChild(el("div", "crumb", contar(id, "hook") + " hooks · " + nCuerpos(id) + " cuerpos finales y de enfoque"));
-    if (d.testeo) panel.appendChild(bloque("Qué se testea primero", d.testeo));
-    if (d.regla) panel.appendChild(bloque("Regla de test", d.regla));
-    const av = el("div"); d.avatares.forEach(a => av.appendChild(bloque(a.nombre, a.desc))); panel.appendChild(seccion("Avatares", av, false));
-    const es = el("div"); d.esquemas.forEach(e => es.appendChild(bloque(e.nombre, e.texto, e.texto)));
-    panel.appendChild(seccion("Cuerpos base por avatar (esquema)", es, false));
-    const ct = el("div"); d.ctas.forEach((c, i) => ct.appendChild(bloque("CTA " + (i + 1), c, c))); panel.appendChild(seccion("CTA", ct, true));
-    if (d.inmueble) { const inm = el("div"); d.inmueble.forEach(r => inm.appendChild(bloque(r.dato, r.contenido + "  (" + r.fuente + ")"))); panel.appendChild(seccion("Datos del inmueble (y los que faltan)", inm, false)); }
-    if (d.antes) panel.appendChild(seccion("Antes de publicar, confirmar con el cliente", bloque("Confirmar", d.antes), false));
-    if (d.nota) panel.appendChild(seccion("Nota", bloque("Nota", d.nota), false));
-    if (d.plan) panel.appendChild(seccion("Plan de test", bloque("Plan", d.plan), false));
-    return;
-  }
-
-  /* ---------- HOOK ---------- */
-  if (m.clase === "hook") {
-    panel.appendChild(el("div", "crumb", m.campana));
-    panel.appendChild(el("p", "title", d.id + " · " + d.angulo));
-    panel.appendChild(bloque("Hook", d.texto, limpiarHook(d.texto)));
-    if (d.variante) panel.appendChild(bloque("Variante", d.variante, limpiarHook(d.variante)));
-    panel.appendChild(bloque("Avatar al que apunta", d.avatar));
-    const cu = m.hijos.filter(h => meta[h].clase === "cuerpo");
-    if (cu.length) {
-      panel.appendChild(el("div", "sec", "Cuerpos que lo acompañan (clic para ver el guion)"));
-      const w = el("div"); cu.forEach(h => w.appendChild(chip(meta[h].datos.avatar, AMBER, () => irA(h)))); panel.appendChild(w);
-    }
-    const en = m.hijos.filter(h => meta[h].clase === "enfoque");
-    if (en.length) {
-      panel.appendChild(el("div", "sec", "Enfoques para escalar este ángulo ganador"));
-      const w = el("div"); en.forEach(h => w.appendChild(chip(meta[h].datos.nombre, ENFOQUE_COLOR, () => irA(h)))); panel.appendChild(w);
-    }
-    return;
-  }
-
-  /* ---------- CUERPO FINAL (guion listo) ---------- */
-  if (m.clase === "cuerpo") {
-    const hk = meta[m.padre].datos;
-    panel.appendChild(el("div", "crumb", m.campana + "  ›  " + hk.id + " · " + hk.angulo));
-    panel.appendChild(el("p", "title", d.etiqueta.replace(/\n[\s\S]*$/, "").trim()));
-    panel.appendChild(avisoPH(hk.texto + " " + d.texto));
-    const hookTxt = limpiarHook(hk.texto);
-    panel.appendChild(botonGrande("Copiar guion completo (hook + cuerpo)", hookTxt + "\n\n" + d.texto));
-    if (hk.variante) panel.appendChild(botonGrande("Copiar guion con la VARIANTE del hook + cuerpo", limpiarHook(hk.variante) + "\n\n" + d.texto, "primary secondary"));
-    panel.appendChild(bloque("1 · Hook (primeros 3–10 s)", hk.texto, hookTxt));
-    if (hk.variante) panel.appendChild(bloque("1b · Variante del hook", hk.variante, limpiarHook(hk.variante)));
-    panel.appendChild(bloque("2 · Cuerpo (≈15–20 s · el CTA va al final)", d.texto, d.texto));
-    panel.appendChild(bloque("Avatar", d.avatar));
-    if (d.esquema) panel.appendChild(seccion("Esquema: Dolor → Mecanismo → Promesa + riesgo", bloque("Esquema", d.esquema, d.esquema), false));
-    return;
-  }
-
-  /* ---------- ENFOQUE ---------- */
-  if (m.clase === "enfoque") {
-    const hk = meta[m.padre].datos;
-    panel.appendChild(el("div", "crumb", m.campana + "  ›  " + hk.id + " · " + hk.angulo));
-    panel.appendChild(el("p", "title", "Enfoque · " + d.nombre));
-    panel.appendChild(avisoPH(d.hook));
-    panel.appendChild(bloque("Hook con este enfoque", d.hook, limpiarHook(d.hook)));
-    const propios = m.hijos.filter(h => meta[h].clase === "enfcuerpo");
-    if (propios.length) {
-      panel.appendChild(el("div", "sec", "Cuerpo de este enfoque (clic para ver el guion)"));
-      const w = el("div"); propios.forEach(h => w.appendChild(chip(meta[h].datos.avatar, AMBER, () => irA(h)))); panel.appendChild(w);
-    } else {
-      panel.appendChild(el("p", "hint", "El documento no trae un cuerpo propio para este enfoque. Como es el mismo ángulo (" + hk.id + " · " + hk.angulo + "), puedes acompañarlo con los cuerpos de ese hook:"));
-      meta[m.padre].hijos.filter(h => meta[h].clase === "cuerpo").forEach(h =>
-        panel.appendChild(botonGrande("Copiar este enfoque + cuerpo " + meta[h].datos.avatar, limpiarHook(d.hook) + "\n\n" + meta[h].datos.texto, "primary secondary")));
-    }
-    return;
-  }
-
-  /* ---------- CUERPO DE ENFOQUE (Habitando) ---------- */
-  const enf = meta[m.padre].datos, hk = meta[meta[m.padre].padre].datos;
-  panel.appendChild(el("div", "crumb", m.campana + "  ›  " + hk.id + " · " + hk.angulo + "  ›  " + enf.nombre));
-  panel.appendChild(el("p", "title", "Enfoque " + enf.nombre + " · " + d.avatar));
-  panel.appendChild(avisoPH(enf.hook + " " + d.texto));
-  panel.appendChild(botonGrande("Copiar guion completo (hook del enfoque + cuerpo)", limpiarHook(enf.hook) + "\n\n" + d.texto));
-  panel.appendChild(bloque("1 · Hook con este enfoque", enf.hook, limpiarHook(enf.hook)));
-  panel.appendChild(bloque("2 · Cuerpo · " + d.estructura, d.texto, d.texto));
-}
-
-/* =====================================================================
-   7) INTERACCIÓN, BOTONES Y BÚSQUEDA
-   ===================================================================== */
-network.on("click", p => {
-  if (!p.nodes.length) return;
-  const id = p.nodes[0];
-  if (meta[id].hijos.length) alternar(id);
-  mostrarDetalle(id); actualizarContador();
-});
-network.on("hoverNode", () => { container.style.cursor = "pointer"; });
-network.on("blurNode",  () => { container.style.cursor = "default"; });
-
-const contador = document.getElementById("count");
-function actualizarContador() {
-  const v = nodes.get(), hooks = v.filter(n => meta[n.id].clase === "hook").length;
-  const cuerpos = v.filter(n => /cuerpo/.test(meta[n.id].clase)).length;
-  const tH = topIds.reduce((s, i) => s + contar(i, "hook"), 0), tC = topIds.reduce((s, i) => s + nCuerpos(i), 0);
-  contador.textContent = hooks + "/" + tH + " hooks · " + cuerpos + "/" + tC + " cuerpos visibles";
-}
-const ajustar = ms => setTimeout(() => network.fit({ animation: true }), ms);
-
-document.getElementById("btnExpand").onclick   = () => { topIds.forEach(expandirTodo); actualizarContador(); ajustar(700); };
-document.getElementById("btnHooks").onclick    = () => { topIds.forEach(t => { meta[t].hijos.forEach(colapsar); expandir(t); }); actualizarContador(); ajustar(400); };
-document.getElementById("btnCollapse").onclick = () => { topIds.forEach(colapsar); actualizarContador(); ajustar(300); };
-document.getElementById("btnFit").onclick      = () => network.fit({ animation: true });
-
-let fisica = true; const btnF = document.getElementById("btnPhysics");
-btnF.onclick = () => { fisica = !fisica; network.setOptions({ physics: { enabled: fisica } }); btnF.textContent = "Física: " + (fisica ? "ON" : "OFF"); btnF.classList.toggle("on", fisica); };
-
-/* Búsqueda: abre las ramas donde aparece el texto y enfoca los resultados */
-document.getElementById("search").addEventListener("input", ev => {
-  const q = ev.target.value.trim().toLowerCase();
-  if (q.length < 2) { network.unselectAll(); actualizarContador(); return; }
-  const aciertos = Object.keys(meta).filter(id => meta[id].clase !== "tipo" && JSON.stringify(meta[id].datos).toLowerCase().includes(q));
-  aciertos.forEach(abrirAncestros); actualizarContador();
-  setTimeout(() => {
-    const ok = aciertos.filter(id => nodes.get(id));
-    if (ok.length) { network.selectNodes(ok); network.fit({ nodes: ok, animation: true }); }
-  }, 160);
-  contador.textContent = aciertos.length + " resultado(s) · " + contador.textContent;
-});
-
-/* =====================================================================
-   8) ARRANQUE: campañas con sus hooks visibles; los cuerpos se abren al
-   hacer clic en cada hook (o con «Expandir todo»).
-   ===================================================================== */
-setTimeout(() => { topIds.forEach(expandir); actualizarContador(); }, 100);
-setTimeout(() => network.fit({ animation: true }), 1200);
+resumen();layout(true);
 </script>
 </body>
 </html>
